@@ -368,6 +368,7 @@ const LabelCollection = struct {
                 //var l: [k - 1]i32 = undefined;
                 @memcpy(l[0..i], label[0..i]);
                 @memcpy(l[i..], label[i + 1 .. self.k]);
+                std.debug.print("_{any}\n", .{l});
 
                 if (try labels_done.containsLabel(l)) continue;
                 try labels_done.addLabel(l);
@@ -458,22 +459,10 @@ const LabelCollection = struct {
             try p_quiver.quiver.addVertex(label);
         }
 
-        var curr_lab: i32 = 0;
         const white_cliques = try self.getWhiteCliquesSorted();
-        for (white_cliques.items) |clique| {
-            for (0..clique.items.len) |i| {
-                const next_i = if (i >= clique.items.len - 1) 0 else i + 1;
-                try p_quiver.quiver.addArrow(clique.items[i], clique.items[next_i], curr_lab);
-                curr_lab += 1;
-            }
-        }
-
-        const black_cliques = try self.getBlackCliquesSorted();
-        for (black_cliques.items) |clique| {
-            for (0..clique.items.len) |i| {
-                const next_i = if (i >= clique.items.len - 1) 0 else i + 1;
-                try p_quiver.quiver.addArrow(clique.items[i], clique.items[next_i], curr_lab);
-                curr_lab += 1;
+        for(white_cliques.items)|clique|{
+            for(0..clique.len)|i|{
+                const next_ind = if(i >= clique.len-1) 0 else i+1;
             }
         }
         return p_quiver;
@@ -575,15 +564,4 @@ pub fn main() !void {
     std.debug.print("\n" ** 4, .{});
     var p_quiver = try a.getPostnikovQuiver();
     defer p_quiver.deinit();
-
-    var v_it = p_quiver.quiver.vertexIterator();
-    while (v_it.next()) |vert| {
-        std.debug.print("{any}\n", .{vert});
-    }
-
-    std.debug.print("\n" ** 1, .{});
-    var a_it = p_quiver.quiver.arrowIterator();
-    while (a_it.next()) |arrow| {
-        std.debug.print("{any} -- {any} --> {any}\n", .{ arrow.from, arrow.label, arrow.to });
-    }
 }
