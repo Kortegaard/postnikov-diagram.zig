@@ -1,9 +1,18 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
 const hashing = @import("hashing.zig");
 const Quiver = @import("vendor/graph.zig/src/DirectedGraph.zig").Quiver;
 
 const that = @This();
+
+pub fn getAllocator() Allocator {
+    if (builtin.os.tag == .emscripten)
+        return std.heap.c_allocator;
+    if (builtin.target.isWasm())
+        return std.heap.wasm_allocator;
+    return std.heap.page_allocator;
+}
 
 /// a < b
 // TODO: Find a way to ensure T is of type slice, and that the type insside T has <, >.
@@ -511,10 +520,11 @@ test "Label collection - isNonCrossing" {
 }
 
 pub fn main() !void {
-    //const allocator = std.heap.wasm_allocator;
     //
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
+    //var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    //const allocatorr = gpa.allocator();
+    //_ = allocatorr;
+    const allocator = getAllocator();
     const input = "3";
     //const stdin = std.io.getStdIn().reader();
     //const stdout = std.io.getStdOut().writer();
@@ -586,4 +596,47 @@ pub fn main() !void {
     while (a_it.next()) |arrow| {
         std.debug.print("{any} -- {any} --> {any}\n", .{ arrow.from, arrow.label, arrow.to });
     }
+
+    const stdout_file = std.io.getStdOut().writer();
+    var bw = std.io.bufferedWriter(stdout_file);
+    const stdout = bw.writer();
+
+    try stdout.print("Run `zig build test` to run the tests.\n", .{});
+    try bw.flush(); // don't forget to flush!
+    try raylibRun(allocator);
+}
+
+const rl = @import("raylib");
+
+pub fn raylibRun(allocator: Allocator) !void {
+    const screenWidth = 800;
+    const screenHeight = 450;
+
+    rl.initWindow(screenWidth, screenHeight, "raylib-zig [shapes] example - raylib logo using shapes");
+    defer rl.closeWindow(); // Close window and OpenGL context
+
+    rl.setTargetFPS(60); // Set our game to run at 60 frames-per-second
+    //--------------------------------------------------------------------------------------
+
+    const num = allocator.create(u8) catch {
+        return;
+    };
+    num.* = 100;
+    const raylib_zig = rl.Color.init(num.*, 164, 29, 255);
+
+    // Main game loop
+    while (!rl.windowShouldClose()) { // Detect window close button or ESC key
+        rl.beginDrawing();
+        defer rl.endDrawing();
+
+        rl.clearBackground(rl.Color.ray_white);
+
+        rl.drawRectangle(screenWidth / 2 - 128, screenHeight / 2 - 128, 256, 256, raylib_zig);
+        rl.drawRectangle(screenWidth / 2 - 112, screenHeight / 2 - 112, 224, 224, rl.Color.ray_white);
+        rl.drawText("raylib-zig", screenWidth / 2 - 96, screenHeight / 2 + 57, 41, raylib_zig);
+
+        rl.drawText("this is ANDERS a texture!", 350, 370, 10, rl.Color.gray);
+        //----------------------------------------------------------------------------------
+    }
+    allocator.destroy(num);
 }

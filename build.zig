@@ -1,9 +1,10 @@
 const std = @import("std");
+const emcc = @import("./emcc.zig");
 
 // Although this function looks imperative, note that its job is to
 // declaratively construct a build graph that will be executed by an external
 // runner.
-pub fn build(b: *std.Build) void {
+pub fn build(b: *std.Build) !void {
     // Standard target options allows the person running `zig build` to choose
     // what target to build for. Here we do not override the defaults, which
     // means any target is allowed, and the default is native. Other options
@@ -18,6 +19,43 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+
+    const raylib_dep = b.dependency("raylib-zig", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const raylib = raylib_dep.module("raylib");
+    const raygui = raylib_dep.module("raygui");
+    const raylib_artifact = raylib_dep.artifact("raylib");
+
+    if (target.query.os_tag == .emscripten) {
+        const exe_lib = emcc.compileForEmscripten(
+            b,
+            "My-Project",
+            "src/main.zig",
+            target,
+            optimize,
+        );
+
+        exe_lib.linkLibrary(raylib_artifact);
+        exe_lib.root_module.addImport("raylib", raylib);
+        exe_lib.root_module.addImport("raygui", raygui);
+
+        const link_step = try emcc.linkWithEmscripten(
+            b,
+            &[_]*std.Build.Step.Compile{ exe_lib, raylib_artifact },
+        );
+
+        link_step.addArg("-sUSE_OFFSET_CONVERTER");
+        b.getInstallStep().dependOn(&link_step.step);
+
+        const run_step = try emcc.emscriptenRunStep(b);
+        run_step.step.dependOn(&link_step.step);
+        const run_option = b.step("run", "Run zig-fish-wasm");
+        run_option.dependOn(&run_step.step);
+        return;
+    }
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
