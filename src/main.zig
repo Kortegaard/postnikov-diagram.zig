@@ -445,26 +445,36 @@ pub const LabelCollection = struct {
         return cliques;
     }
 
+    pub const PostnikovQuiverVertexInfo = struct {
+        pos: struct { x: f32, y: f32 },
+    };
     pub const PostnikovQuiver = struct {
         const PQSelf = @This();
         quiver: Quiver([]const i32, i32),
+        vertex_info: hashing.SliceHashMap(i32, PostnikovQuiverVertexInfo),
 
         pub fn init(allocator: Allocator) PQSelf {
             const quiv = Quiver([]const i32, i32).init(allocator);
+            const vert_info = hashing.SliceHashMap(i32, PostnikovQuiverVertexInfo).init(allocator);
             return .{
                 .quiver = quiv,
+                .vertex_info = vert_info,
             };
         }
         pub fn deinit(self: *PQSelf) void {
             self.quiver.deinit();
+            self.vertex_info.deinit();
         }
     };
 
     pub fn getPostnikovQuiver(self: Self) !PostnikovQuiver {
-        var p_quiver = PostnikovQuiver.init(self.allocator);
+        var prng = std.rand.DefaultPrng.init(43);
+        const rand = prng.random();
 
+        var p_quiver = PostnikovQuiver.init(self.allocator);
         for (self.collection.items) |label| {
             try p_quiver.quiver.addVertex(label);
+            try p_quiver.vertex_info.put(label, .{ .pos = .{ .x = rand.float(f32) * 200 + 10, .y = rand.float(f32) * 200 + 10 } });
         }
 
         var curr_lab: i32 = 0;

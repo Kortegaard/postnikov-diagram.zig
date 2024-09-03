@@ -4,10 +4,14 @@ const Allocator = std.mem.Allocator;
 const PostnikovQuiver = @import("./main.zig").LabelCollection.PostnikovQuiver;
 
 pub fn raylibShowPostnikovQuiver(allocator: Allocator, p_quiver: *PostnikovQuiver) !void {
-    _ = p_quiver;
     const screenWidth = 800;
     const screenHeight = 450;
 
+    rl.setConfigFlags(.{
+        //.window_resizable = true,
+        .window_highdpi = true,
+        .vsync_hint = true,
+    });
     rl.initWindow(screenWidth, screenHeight, "raylib-zig [shapes] example - raylib logo using shapes");
     defer rl.closeWindow(); // Close window and OpenGL context
 
@@ -26,6 +30,14 @@ pub fn raylibShowPostnikovQuiver(allocator: Allocator, p_quiver: *PostnikovQuive
         defer rl.endDrawing();
 
         rl.clearBackground(rl.Color.ray_white);
+
+        var vert_it = p_quiver.quiver.vertexIterator();
+        while (vert_it.next()) |v| {
+            if (p_quiver.vertex_info.get(v)) |inf| {
+                rl.drawCircle(@intFromFloat(inf.pos.x), @intFromFloat(inf.pos.y), 5, rl.Color.red);
+            }
+        }
+        rl.drawFPS(500, 400);
 
         rl.drawRectangle(screenWidth / 2 - 128, screenHeight / 2 - 128, 256, 256, raylib_zig);
         rl.drawRectangle(screenWidth / 2 - 112, screenHeight / 2 - 112, 224, 224, rl.Color.ray_white);
