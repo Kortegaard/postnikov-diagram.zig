@@ -634,8 +634,6 @@ pub fn raylibRun(allocator: Allocator) !void {
         rl.drawRectangle(screenWidth / 2 - 128, screenHeight / 2 - 128, 256, 256, raylib_zig);
         rl.drawRectangle(screenWidth / 2 - 112, screenHeight / 2 - 112, 224, 224, rl.Color.ray_white);
         rl.drawText("raylib-zig", screenWidth / 2 - 96, screenHeight / 2 + 57, 41, raylib_zig);
-
-        rl.drawText("this is ANDERS a texture!", 350, 370, 10, rl.Color.gray);
         //----------------------------------------------------------------------------------
     }
     allocator.destroy(num);
