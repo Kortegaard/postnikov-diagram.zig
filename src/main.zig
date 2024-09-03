@@ -1,5 +1,6 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
+const hashing = @import("hashing.zig");
 
 const that = @This();
 
@@ -382,10 +383,10 @@ const LabelCollection = struct {
     }
 
     // label should be of length k+1
-    pub fn getBlackCliqueContainedIn(self: Self, label: []i32) !std.ArrayList([]const i32) {
-        var clique = std.ArrayList([]i32).init(self.allocator);
+    pub fn getBlackCliqueContainedIn(self: Self, label: []const i32) !std.ArrayList([]const i32) {
+        var clique = std.ArrayList([]const i32).init(self.allocator);
         for (self.collection.items) |l| {
-            if (isSubsetAssumeSorted(i32, &l, &label)) {
+            if (isSubsetAssumeSorted(i32, l, label)) {
                 try clique.append(l);
             }
         }
@@ -395,33 +396,40 @@ const LabelCollection = struct {
     pub fn getBlackCliquesSorted(self: Self) !std.ArrayList(std.ArrayList([]const i32)) {
         const cliques = try self.getBlackCliques();
         for (cliques.items) |clique| {
-            std.mem.sort([]i32, clique.items, {}, isLessThanAlphabeticallyFct([]i32));
+            std.mem.sort([]const i32, clique.items, {}, isLessThanAlphabeticallyFct([]const i32));
         }
         return cliques;
     }
 
     // TODO: Rewrite
     pub fn getBlackCliques(self: Self) !std.ArrayList(std.ArrayList([]const i32)) {
-        var cliques = std.ArrayList(std.ArrayList([]i32)).init(self.allocator);
-        var labels_done = LabelCollection.init(self.allocator, self.k - 1, self.n);
+        var cliques = std.ArrayList(std.ArrayList([]const i32)).init(self.allocator);
+        var labels_done = LabelCollection.init(self.allocator, self.k + 1, self.n);
         defer labels_done.deinit();
         errdefer labels_done.deinit();
 
         for (self.collection.items) |label| {
-            for (0..self.k) |i| {
-                var l = try self.allocator.alloc(i32, self.k - 1);
-                //var l: [k - 1]i32 = undefined;
-                @memcpy(l[0..i], label[0..i]);
-                @memcpy(l[i..], label[i + 1 .. self.k]);
-                std.debug.print("_{any}\n", .{l});
+            for_i: for (0..self.n) |i| {
+                for (label) |label_i| {
+                    if (i == label_i) continue :for_i;
+                }
 
+                // Copy, add and sort
+                var l = try self.allocator.alloc(i32, self.k + 1);
+                @memcpy(l[0..self.k], label[0..self.k]);
+                l[self.k] = @intCast(i);
+                std.mem.sort(i32, l, {}, comptime std.sort.asc(i32));
+
+                //
                 if (try labels_done.containsLabel(l)) continue;
                 try labels_done.addLabel(l);
-                const white_clique = try self.getWhiteCliqueContaining(l);
-                if (white_clique.items.len > 2) {
-                    try cliques.append(white_clique);
+                const black_clique = try self.getBlackCliqueContainedIn(l);
+
+                // Ensure non trivial
+                if (black_clique.items.len > 2) {
+                    try cliques.append(black_clique);
                 } else {
-                    white_clique.deinit();
+                    black_clique.deinit();
                 }
             }
         }
@@ -475,6 +483,7 @@ pub fn main() !void {
 
     var a = LabelCollection.init(allocator, integer, 6);
     defer a.deinit();
+    try a.addLabel(&[3]i32{ 1, 25, 22 });
     try a.addLabel(&[3]i32{ 1, 3, 4 });
     try a.addLabel(&[_]i32{ 25, 4, 1 });
     try a.addLabel(&[_]i32{ 22, 4, 1 });
@@ -493,8 +502,30 @@ pub fn main() !void {
         white_cliques.deinit();
     }
 
-    std.debug.print("\n\n\n", .{});
+    std.debug.print("\n\n\nWhite Cliques:\n", .{});
     for (white_cliques.items) |wc| {
         std.debug.print("{any}\n", .{wc.items});
     }
+
+    const black_cliques = try a.getBlackCliquesSorted();
+    defer {
+        for (black_cliques.items) |wc| {
+            wc.deinit();
+        }
+        black_cliques.deinit();
+    }
+
+    std.debug.print("\n\n\nBlack Cliques:\n", .{});
+    for (black_cliques.items) |wc| {
+        std.debug.print("{any}\n", .{wc.items});
+    }
+
+    std.debug.print("\n" ** 4, .{});
+    var map = hashing.SliceHashMap(i32, i32).init(allocator);
+    defer map.deinit();
+    try map.put(&[_]i32{ 1, 2, 3 }, -7);
+    try map.put(&[_]i32{ 1, 2, 4 }, -6);
+    std.debug.print("{any}\n", .{map.get(&[_]i32{ 1, 2, 3 })});
+    std.debug.print("{any}\n", .{map.get(&[_]i32{ 1, 2, 4 })});
+    std.debug.print("{any}\n", .{map.get(&[_]i32{ 1, 4, 2 })});
 }
