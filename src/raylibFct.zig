@@ -1,7 +1,8 @@
 const std = @import("std");
 const rl = @import("raylib");
 const Allocator = std.mem.Allocator;
-const PostnikovQuiver = @import("./main.zig").LabelCollection.PostnikovQuiver;
+//const PostnikovQuiver = @import("./main.zig").LabelCollection.PostnikovQuiver;
+const PostnikovQuiver = @import("./PostnikovData.zig").PostnikovQuiver;
 
 pub fn raylibShowPostnikovQuiver(allocator: Allocator, p_quiver: *PostnikovQuiver) !void {
     const screenWidth = 700;
@@ -15,7 +16,7 @@ pub fn raylibShowPostnikovQuiver(allocator: Allocator, p_quiver: *PostnikovQuive
     rl.initWindow(screenWidth, screenHeight, "raylib-zig [shapes] example - raylib logo using shapes");
     defer rl.closeWindow(); // Close window and OpenGL context
 
-    rl.setTargetFPS(120); // Set our game to run at 60 frames-per-second
+    rl.setTargetFPS(60); // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
 
     const num = allocator.create(u8) catch {
