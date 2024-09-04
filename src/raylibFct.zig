@@ -3,8 +3,9 @@ const rl = @import("raylib");
 const Allocator = std.mem.Allocator;
 //const PostnikovQuiver = @import("./main.zig").LabelCollection.PostnikovQuiver;
 const PostnikovQuiver = @import("./PostnikovData.zig").PostnikovQuiver;
+const PostnikovPlabicGraph = @import("./PostnikovData.zig").PostnikovPlabicGraph;
 
-pub fn raylibShowPostnikovQuiver(allocator: Allocator, p_quiver: *PostnikovQuiver) !void {
+pub fn raylibShowPostnikovQuiver(allocator: Allocator, p_quiver: *PostnikovQuiver, plabic: *PostnikovPlabicGraph) !void {
     const screenWidth = 700;
     const screenHeight = 400;
 
@@ -48,6 +49,21 @@ pub fn raylibShowPostnikovQuiver(allocator: Allocator, p_quiver: *PostnikovQuive
                 rl.drawCircle(@intFromFloat(inf.pos.x), @intFromFloat(inf.pos.y), 5, if (inf.frozen) rl.Color.blue else rl.Color.red);
             }
         }
+
+        var vert_it2 = plabic.quiver.vertexIterator();
+        while (vert_it2.next()) |v| {
+            if (plabic.vertex_info.get(v)) |inf| {
+                rl.drawCircle(@intFromFloat(inf.pos.x), @intFromFloat(inf.pos.y), 5, if (inf.color == .white) rl.Color.light_gray else rl.Color.black);
+            }
+        }
+
+        var arr_it2 = plabic.quiver.arrowIterator();
+        while (arr_it2.next()) |ar| {
+            const from_info = plabic.vertex_info.get(ar.from) orelse continue;
+            const to_info = plabic.vertex_info.get(ar.to) orelse continue;
+            rl.drawLine(@intFromFloat(from_info.pos.x), @intFromFloat(from_info.pos.y), @intFromFloat(to_info.pos.x), @intFromFloat(to_info.pos.y), rl.Color.light_gray);
+        }
+        plabic.setLocationBasedOnPostnikovQuiver(p_quiver.*);
         rl.drawFPS(0, 0);
 
         //rl.drawRectangle(screenWidth / 2 - 128, screenHeight / 2 - 128, 256, 256, raylib_zig);

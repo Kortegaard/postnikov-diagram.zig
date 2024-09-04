@@ -115,6 +115,17 @@ pub fn sort(self: *Self) void {
     }
 }
 
+pub fn getProjectiveLabels(self: Self) !std.ArrayList([]const i32) {
+    var list = std.ArrayList([]const i32).init(self.allocator);
+    for (self.collection.items) |label| {
+        if (LabelFct.isProjectiveAssumeSorted(label, self.n))
+            try list.append(label);
+    }
+
+    std.mem.sort([]const i32, list.items, {}, LabelFct.ProjectiveCyclicLessThanStartingAt1);
+    return list;
+}
+
 /// requires label.len = k-1
 ///  items inside return is NOT changing ownership
 pub fn getWhiteCliqueContaining(self: Self, label: []const i32) !std.ArrayList([]const i32) {

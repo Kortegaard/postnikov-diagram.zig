@@ -21,6 +21,26 @@ pub fn isLessThanAlphabeticallyFct(comptime T: type) fn (void, a: T, b: T) bool 
         }
     }.inner;
 }
+pub fn ProjectiveCyclicLessThanStartingAt1(_: void, a: []const i32, b: []const i32) bool {
+    if (a.len == 0 and b.len == 0) return false;
+    if (a.len == 0 and b.len > 0) return true;
+
+    var a_start: i32 = a[0];
+    for (a[1..], 0..) |a_el, i| {
+        if (a_el - a[i] > 1) {
+            a_start = a_el;
+            break;
+        }
+    }
+    var b_start: i32 = b[0];
+    for (b[1..], 0..) |b_el, i| {
+        if (b_el - b[i] > 1) {
+            b_start = b_el;
+            break;
+        }
+    }
+    return a_start < b_start;
+}
 
 /// a < b
 pub fn isLessThanAlphabetically(a: []const i32, b: []const i32) bool {
@@ -55,6 +75,14 @@ test "fct: isLessThanAlphabetically" {
     try std.testing.expectEqual(isLessThanAlphabetically(&[_]i32{ 1, 2, 3 }, &[_]i32{ 1, 2 }), false);
 }
 
+fn isEqual(T: type, n1: T, n2: T) bool {
+    return switch (@typeInfo(T)) {
+        .Array => |e| std.mem.eql(e.child, &n1, &n2),
+        .Pointer => |e| std.mem.eql(e.child, n1, n2),
+        else => n1 == n2,
+    };
+}
+
 pub fn isSubsetAssumeSorted(comptime T: type, subset: []const T, set: []const T) bool {
     if (subset.len > set.len) return false;
     if (subset.len == 0) return true;
@@ -62,7 +90,7 @@ pub fn isSubsetAssumeSorted(comptime T: type, subset: []const T, set: []const T)
     var subset_index: usize = 0;
 
     for (0..set.len) |i| {
-        if (set[i] == subset[subset_index])
+        if (isEqual(T, set[i], subset[subset_index]))
             subset_index += 1;
         if (subset_index == subset.len)
             return true;
@@ -113,6 +141,31 @@ test "cyclic ordered" {
     try std.testing.expectEqual(isCyclicOrdered(1, 1, 2), false);
     try std.testing.expectEqual(isCyclicOrdered(1, 2, 2), false);
     try std.testing.expectEqual(isCyclicOrdered(1, 2, 1), false);
+}
+
+pub fn isProjectiveAssumeSorted(label: []const i32, n: usize) bool {
+    var count: usize = 0;
+    for (label, 0..) |el, i| {
+        const next_index = if (i == label.len - 1) 0 else i + 1;
+        if (@mod(label[next_index] - el, @as(i32, @intCast(n))) == 1) {
+            count += 1;
+            continue;
+        }
+    }
+    if (n == label.len)
+        return count == label.len;
+    return count == label.len - 1;
+}
+
+test isProjectiveAssumeSorted {
+    try std.testing.expectEqual(isProjectiveAssumeSorted(&[_]i32{ 1, 2, 3 }, 10), true);
+    try std.testing.expectEqual(isProjectiveAssumeSorted(&[_]i32{ 1, 2, 3 }, 3), true);
+    try std.testing.expectEqual(isProjectiveAssumeSorted(&[_]i32{ 1, 2, 4 }, 10), false);
+    try std.testing.expectEqual(isProjectiveAssumeSorted(&[_]i32{ 1, 7, 8, 9, 10 }, 10), true);
+    try std.testing.expectEqual(isProjectiveAssumeSorted(&[_]i32{ 1, 7, 8, 9, 10 }, 10), true);
+    try std.testing.expectEqual(isProjectiveAssumeSorted(&[_]i32{ 2, 3, 4, 6, 7 }, 10), false);
+    try std.testing.expectEqual(isProjectiveAssumeSorted(&[_]i32{ 2, 3, 4, 5, 6 }, 10), true);
+    try std.testing.expectEqual(isProjectiveAssumeSorted(&[_]i32{ 1, 6, 7, 8, 9 }, 10), false);
 }
 
 // Best case (no overlaps) : O(|c1| + |c2|)
@@ -219,4 +272,50 @@ test "fct: rotationSet" {
     // Rotate array further that wrap + keep same order + don't mod to 0
     a = rotateSet(4, 10, 8, .{ 1, 2, 3, 4 });
     try std.testing.expectEqualSlices(i32, &[_]i32{ 9, 10, 1, 2 }, &a);
+}
+
+// Example of how the iterator should function
+//    [1,2,3,4] --> [1,2], [2,3], [3,4], [4,1]
+//    ["aa", "bb"] --> ["aa", "bb"], ["bb","aa"]
+//    [54,] --> null
+pub fn boundaryOfSliceIterator(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        sl: []T,
+        pos: usize = 0,
+        pub fn init(slice: []T) Self {
+            return .{ .sl = slice };
+        }
+
+        pub fn next(self: *Self) ?[2]T {
+            if (self.sl.len < 2) return null;
+            if (self.pos >= self.sl.len) return null;
+            self.pos += 1;
+            if (self.pos >= self.pos) {
+                return [2]T{ self.sl[self.pos - 1], self.sl[0] };
+            }
+            return [2]T{ self.sl[self.pos - 1], self.sl[self.pos] };
+        }
+    };
+}
+
+pub fn boundaryIntersectionSize(comptime T: type, sl1: []T, sl2: []T) usize {
+    const BoundaryIterator = boundaryOfSliceIterator(T);
+
+    var count: usize = 0;
+    var it1 = BoundaryIterator.init(sl1);
+    //std.debug.print("{any}, {sl2}\n\n", .{ sl1, sl2 });
+    while (it1.next()) |b1| {
+        var it2 = BoundaryIterator.init(sl2);
+        while (it2.next()) |b2| {
+            if (isEqual(T, b1[0], b2[0]) and isEqual(T, b1[1], b2[1])) {
+                count += 1;
+            } else if (isEqual(T, b1[0], b2[1]) and isEqual(T, b1[1], b2[0])) {
+                count += 1;
+            }
+        }
+    }
+
+    return count;
 }

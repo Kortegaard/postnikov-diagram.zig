@@ -5,6 +5,7 @@ const hashing = @import("hashing.zig");
 const Quiver = @import("vendor/graph.zig/src/DirectedGraph.zig").Quiver;
 const Pos2 = @import("helpers.zig").Pos2;
 const PostnikovQuiver = @import("PostnikovData.zig").PostnikovQuiver;
+const PostnikovPlabicGraph = @import("PostnikovData.zig").PostnikovPlabicGraph;
 const LabelFct = @import("LabelFunctions.zig");
 const LabelCollection = @import("LabelCollection.zig");
 
@@ -21,15 +22,11 @@ pub fn getAllocator() Allocator {
 const r = @import("./raylibFct.zig");
 pub fn main() !void {
     //
-    //var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    //const allocatorr = gpa.allocator();
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
     //_ = allocatorr;
-    const allocator = getAllocator();
+    //const allocator = getAllocator();
     const input = "3";
-    //const stdin = std.io.getStdIn().reader();
-    //const stdout = std.io.getStdOut().writer();
-
-    //_ = try stdin.readUntilDelimiter(&input, '\n');
 
     const integer = try std.fmt.parseInt(usize, input, 10);
     std.debug.print("The user entered number: {d}\n", .{integer});
@@ -63,12 +60,6 @@ pub fn main() !void {
     try a.addLabel(&[_]i32{ 1, 2, 3, 9, 10 });
     try a.addLabel(&[_]i32{ 1, 2, 3, 4, 10 });
 
-    //try a.addLabel(&[3]i32{ 1, 25, 22 });
-    //try a.addLabel(&[3]i32{ 1, 3, 4 });
-    //try a.addLabel(&[_]i32{ 25, 4, 1 });
-    //try a.addLabel(&[_]i32{ 22, 4, 1 });
-    //try a.addLabel(&.{ 3, 5, 1 });
-    //try a.addLabel(&[_]i32{ 1, 2, 3 });
     std.debug.print("k = {any}\n", .{a.collection.items[0].len});
 
     a.print();
@@ -130,8 +121,20 @@ pub fn main() !void {
     var bw = std.io.bufferedWriter(stdout_file);
     const stdout = bw.writer();
 
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
+    try stdout.print("stdout\n", .{});
     try bw.flush(); // don't forget to flush!
 
-    try r.raylibShowPostnikovQuiver(allocator, &p_quiver);
+    var plabicGraph = try PostnikovPlabicGraph.initFromLabelCollection(allocator, a, .{});
+    defer plabicGraph.deinit();
+
+    std.debug.print("\n----PROJECTIVES\n", .{});
+    const projs = try a.getProjectiveLabels();
+    defer projs.deinit();
+    for (projs.items) |proj| {
+        std.debug.print("{any}\n", .{proj});
+    }
+
+    plabicGraph.setLocationBasedOnPostnikovQuiver(p_quiver);
+
+    try r.raylibShowPostnikovQuiver(allocator, &p_quiver, &plabicGraph);
 }

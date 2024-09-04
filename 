@@ -1,0 +1,273 @@
+const std = @import("std");
+const q2 = @import("Quiver2.zig");
+const Allocator = std.mem.Allocator;
+const assert = std.debug.assert;
+
+pub const Quiver = @import("Quiver2.zig").Quiver;
+pub const Deque = @import("Deque.zig").Deque;
+
+pub const Helpers = @import("helpers.zig");
+pub const Hashing = @import("hashing.zig");
+pub const FatIndex = Helpers.FatIndex;
+
+const DirectedGraphError = error{ ArrowNotFound, VertexNotFound, ArrowAlreadyExists, VertexAlreadyExists };
+pub const Error = DirectedGraphError || error{ outofmemory, OutOfMemory } || Allocator.Error;
+
+pub fn DirectedGraph(comptime vertex_value_type: type, comptime arrow_value_type: type) type {
+    return struct {
+        pub const Self = @This();
+
+        pub const ArrowEndpoint = enum { Target, Source };
+
+        pub const Arrow = struct {
+            from: vertex_value_type = undefined,
+            to: vertex_value_type = undefined,
+            label: ?arrow_value_type = null,
+
+            pub inline fn getEndpoint(self: @This(), endpoint: ArrowEndpoint) vertex_value_type {
+                return switch (endpoint) {
+                    .Target => self.to,
+                    .Source => self.from,
+                };
+            }
+        };
+
+        pub fn vertex_eql(a: vertex_value_type, b: vertex_value_type) bool {
+            return switch (@typeInfo(vertex_value_type)) {
+                .Array => |e| std.mem.eql(e.child, &a, &b),
+                .Pointer => |e| std.mem.eql(e.child, a, b),
+                else => a == b,
+            };
+        }
+
+        pub const VertexIterator = union(enum) {
+            autohashmap: std.AutoHashMap(vertex_value_type, FatIndex).KeyIterator,
+            slice: Helpers.SliceIterator(vertex_value_type),
+
+            pub fn next(self: *@This()) ?vertex_value_type {
+                switch (self.*) {
+                    .autohashmap => |*it| if (it.next()) |res| return res.*,
+                    .slice => |*it| if (it.next()) |res| return res,
+                }
+                return null;
+            }
+        };
+
+        pub const ArrowIteratorInterface = union(enum) {
+            autohashmap: std.AutoHashMap(arrow_value_type, Arrow).ValueIterator,
+            outmaps: q2.Quiver(vertex_value_type, arrow_value_type).ArrowIterator,
+
+            pub fn next(self: *@This()) ?Arrow {
+                switch (self.*) {
+                    .autohashmap => |*it| if (it.next()) |res| return res.*,
+                    .outmaps => |*it| return it.next(),
+                }
+                return null;
+            }
+        };
+
+        pub const Walk = struct {
+            pub const ArrowDirection = enum { direct, inverse };
+
+            pub const DirectedArrow = struct {
+                arrow: Arrow,
+                direction: ArrowDirection,
+            };
+
+            path: Deque(DirectedArrow),
+            start: vertex_value_type = undefined,
+            end: vertex_value_type = undefined,
+
+            pub fn init(allocator: Allocator) @This() {
+                return .{
+                    .path = Deque(DirectedArrow).init(allocator),
+                };
+            }
+
+            pub fn initWithCapacity(allocator: Allocator, capacity: usize) !Walk {
+                const p = try Deque(DirectedArrow).initWithCapacity(allocator, capacity);
+                return .{
+                    .path = p,
+                };
+            }
+
+            pub fn cloneWithExtraCapacity(self: Walk, extra_capacity: usize) !Walk {
+                return .{
+                    .path = try self.path.cloneWithExtraCapacity(extra_capacity),
+                    .start = self.start,
+                    .end = self.end,
+                };
+            }
+
+            pub fn clone(self: Walk) !Walk {
+                return self.cloneWithExtraCapacity(0);
+            }
+
+            pub fn deinit(self: *Walk) void {
+                self.path.deinit();
+            }
+
+            pub fn append(self: *Walk, d_arr: DirectedArrow) !void {
+                if (self.path.size() == 0) {
+                    try self.path.append(d_arr);
+                    self.end = d_arr.arrow.to;
+                    self.start = d_arr.arrow.from;
+                    return;
+                }
+
+                if (!vertex_eql(self.end, d_arr.arrow.from)) return (error{ArrowDoesNotCompose}).ArrowDoesNotCompose;
+                try self.path.append(d_arr);
+                self.end = d_arr.arrow.to;
+            }
+
+            pub fn appendArrow(self: *Walk, arr: Arrow) !void {
+                try self.append(.{ .arrow = arr, .direction = .direct });
+            }
+
+            pub fn setTrivialAtVertex(self: *@This(), v: vertex_value_type) void {
+                self.start = v;
+                self.end = v;
+            }
+
+            pub fn isTrivial(self: Walk) void {
+                return self.path.size() == 0 and self.start == self.length;
+            }
+
+            pub fn len(self: Walk) usize {
+                return self.path.size();
+            }
+
+            pub fn arrowIterator(self: Walk) Deque(DirectedArrow).Iterator {
+                return self.path.iterator();
+            }
+
+            // TODO: Todo.. rewrite.. This brings shames apon my program
+            pub fn containsSubPath(self: Walk, other: Walk) bool {
+                if (other.len() == 0) return true;
+                if (other.len() > self.len()) return false;
+
+                var self_arr_it = self.arrowIterator();
+                while (self_arr_it.next()) |_| {
+                    var other_arr_it = other.arrowIterator();
+                    blk: {
+                        var i: usize = 0;
+                        while (other_arr_it.next()) |arr_other| : (i += 1) {
+                            if (self_arr_it.peak(i)) |a| {
+                                if (a.arrow.label orelse 0 != arr_other.arrow.label) break :blk;
+                            } else {
+                                break :blk;
+                            }
+                        }
+                        return true;
+                    }
+                }
+                return false;
+            }
+        };
+
+        ptr: *anyopaque,
+        allocator: Allocator,
+        vTable: *const VTable,
+
+        pub const VTable = struct {
+            addVertex: *const fn (ctx: *anyopaque, label: vertex_value_type) Error!void,
+            removeVertex: *const fn (ctx: *anyopaque, label: vertex_value_type) void,
+            vertexIterator: *const fn (ctx: *anyopaque) VertexIterator,
+            containsVertex: *const fn (ctx: *anyopaque, label: vertex_value_type) bool,
+
+            addArrow: *const fn (ctx: *anyopaque, from: vertex_value_type, to: vertex_value_type, label: arrow_value_type) Error!void,
+            removeArrow: *const fn (ctx: *anyopaque, label: arrow_value_type) void,
+            arrowIterator: *const fn (ctx: *anyopaque) ArrowIteratorInterface,
+            containsArrowBetween: *const fn (ctx: *anyopaque, from: vertex_value_type, to: vertex_value_type) bool,
+
+            getArrowFromLabel: *const fn (ctx: *anyopaque, label: arrow_value_type) ?Arrow,
+
+            getArrowsOut: *const fn (ctx: *anyopaque, vertex_label: vertex_value_type) []Arrow,
+            getArrowsIn: *const fn (ctx: *anyopaque, vertex_label: vertex_value_type) []Arrow,
+        };
+
+        pub fn addVertex(self: *Self, label: vertex_value_type) Error!void {
+            return self.vTable.addVertex(self.ptr, label);
+        }
+
+        pub fn removeVertex(self: *Self, label: vertex_value_type) Error!void {
+            return self.vTable.removeArrow(self.ptr, label);
+        }
+        pub fn containsVertex(self: *Self, label: vertex_value_type) bool {
+            return self.vTable.containsVertex(self.ptr, label);
+        }
+
+        pub fn containsArrowBetween(self: *Self, from: vertex_value_type, to: vertex_value_type) bool {
+            return self.vTable.containsArrowBetween(self.ptr, from, to);
+        }
+
+        pub fn vertexIterator(self: *Self) VertexIterator {
+            return self.vTable.vertexIterator(self.ptr);
+        }
+
+        pub fn getArrowsIn(self: *Self, label: vertex_value_type) []Arrow {
+            return self.vTable.getArrowsIn(self.ptr, label);
+        }
+
+        pub fn getArrowsOut(self: *Self, label: vertex_value_type) []Arrow {
+            return self.vTable.getArrowsOut(self.ptr, label);
+        }
+
+        pub fn addArrow(self: Self, from: vertex_value_type, to: vertex_value_type, label: arrow_value_type) Error!void {
+            return self.vTable.addArrow(self.ptr, from, to, label);
+        }
+
+        pub fn removeArrow(self: Self, label: arrow_value_type) Error!void {
+            return self.vTable.removeArrow(self.ptr, label);
+        }
+
+        pub fn arrowIterator(self: *Self) ArrowIteratorInterface {
+            return self.vTable.arrowIterator(self.ptr);
+        }
+
+        pub fn getArrowFromLabel(self: *Self, label: arrow_value_type) ?Arrow {
+            return self.vTable.getArrowFromLabel(self.ptr, label);
+        }
+
+        pub fn pathFromArrowLabel(self: *Self, labels: []const arrow_value_type) !Walk {
+            var path = try Walk.initWithCapacity(self.allocator, labels.len);
+            errdefer path.deinit();
+            for (labels) |label| {
+                const arr = self.getArrowFromLabel(label) orelse return Error.ArrowNotFound;
+                try path.appendArrow(arr);
+            }
+            return path;
+        }
+
+        // Passing ownership
+        pub fn pathOfLength(self: *Self, len: usize) !std.ArrayList(Walk) {
+            var list = std.ArrayList(Walk).init(self.allocator);
+
+            var it = self.vertexIterator();
+            while (it.next()) |v| {
+                var p = Walk.init(self.allocator);
+                p.setTrivialAtVertex(v);
+                try list.append(p);
+            }
+
+            var curr_length: usize = 0;
+            var start_index: usize = 0;
+            var end_index: usize = list.items.len;
+            while (curr_length < len) {
+                for (start_index..end_index) |ind| {
+                    const end = list.items[ind].end;
+                    for (self.getArrowsOut(end)) |arr_out| {
+                        var new_path = try list.items[ind].cloneWithExtraCapacity(1);
+                        try new_path.appendArrow(arr_out);
+                        try list.append(new_path);
+                    }
+                }
+                start_index = end_index;
+                end_index = list.items.len;
+                curr_length += 1;
+            }
+
+            return list;
+        }
+    };
+}
