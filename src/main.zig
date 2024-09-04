@@ -445,19 +445,75 @@ pub const LabelCollection = struct {
         return cliques;
     }
 
+    const Pos2 = struct {
+        x: f32 = 0,
+        y: f32 = 0,
+
+        pub fn normSquared(self: Pos2) f32 {
+            return self.x * self.x + self.y * self.y;
+        }
+
+        pub fn norm(self: Pos2) f32 {
+            return std.math.sqrt(self.normSquared());
+        }
+
+        pub fn add(self: Pos2, other: Pos2) Pos2 {
+            return .{
+                .x = self.x + other.x,
+                .y = self.y + other.y,
+            };
+        }
+
+        pub fn subtract(self: Pos2, other: Pos2) Pos2 {
+            return .{
+                .x = self.x - other.x,
+                .y = self.y - other.y,
+            };
+        }
+        pub fn div(self: Pos2, scalar: f32) Pos2 {
+            return .{
+                .x = self.x / scalar,
+                .y = self.y / scalar,
+            };
+        }
+
+        pub fn mult(self: Pos2, scalar: f32) Pos2 {
+            return .{
+                .x = self.x * scalar,
+                .y = self.y * scalar,
+            };
+        }
+
+        pub fn normalize(self: Pos2) Pos2 {
+            const _norm = self.norm();
+            return .{
+                .x = self.x / _norm,
+                .y = self.y / _norm,
+            };
+        }
+
+        pub fn normalize_c(self: *Pos2) void {
+            const _norm = self.norm();
+            self.x = self.x / _norm;
+            self.y = self.y / _norm;
+        }
+    };
+
     pub const PostnikovQuiverVertexInfo = struct {
-        pos: struct { x: f32, y: f32 },
+        pos: Pos2,
         frozen: bool = false,
     };
     pub const PostnikovQuiver = struct {
         const PQSelf = @This();
         quiver: Quiver([]const i32, i32),
         vertex_info: hashing.SliceHashMap(i32, PostnikovQuiverVertexInfo),
+        allocator: Allocator,
 
         pub fn init(allocator: Allocator) PQSelf {
             const quiv = Quiver([]const i32, i32).init(allocator);
             const vert_info = hashing.SliceHashMap(i32, PostnikovQuiverVertexInfo).init(allocator);
             return .{
+                .allocator = allocator,
                 .quiver = quiv,
                 .vertex_info = vert_info,
             };
@@ -466,6 +522,69 @@ pub const LabelCollection = struct {
             self.quiver.deinit();
             self.vertex_info.deinit();
         }
+
+        fn spring_F0(u: Pos2, v: Pos2, c0: f32) Pos2 {
+            const div_factor = v.subtract(u).normSquared() / c0;
+            return v.subtract(u).normalize().div(div_factor);
+        }
+
+        fn spring_F1(u: Pos2, v: Pos2, c1: f32, l: f32) Pos2 {
+            const mul_factor = -c1 * (v.subtract(u).norm() - l);
+            return v.subtract(u).normalize().mult(mul_factor);
+        }
+
+        fn spring_F(self: *PQSelf, vertex: []const i32, c0: f32, c1: f32, l: f32) Pos2 {
+            const info_vert = self.vertex_info.get(vertex) orelse unreachable;
+            const pos_vert = info_vert.pos;
+
+            var Force: Pos2 = .{ .x = 0, .y = 0 };
+
+            var vert_it = self.quiver.vertexIterator();
+            while (vert_it.next()) |vertex_u| {
+                if (std.mem.eql(i32, vertex, vertex_u)) continue;
+                const info_vert_u = self.vertex_info.get(vertex_u) orelse unreachable;
+                const pos_vert_u = info_vert_u.pos;
+                Force = Force.add(spring_F0(pos_vert_u, pos_vert, c0));
+            }
+
+            const arrows_out = self.quiver.getArrowsOut(vertex);
+            for (arrows_out) |arr| {
+                const info_vert_u = self.vertex_info.get(arr.to) orelse unreachable;
+                const pos_vert_u = info_vert_u.pos;
+                Force = Force.add(spring_F1(pos_vert_u, pos_vert, c1, l));
+            }
+
+            const arrows_in = self.quiver.getArrowsIn(vertex);
+            for (arrows_in) |arr| {
+                const info_vert_u = self.vertex_info.get(arr.from) orelse unreachable;
+                const pos_vert_u = info_vert_u.pos;
+                Force = Force.add(spring_F1(pos_vert_u, pos_vert, c1, l));
+            }
+            return Force;
+        }
+
+        pub fn apply_spring_step(self: *PQSelf, delta: f32, c0: f32, c1: f32, l: f32) !void {
+            _ = .{ self, delta, c0, c1 };
+            var map = hashing.SliceHashMap(i32, Pos2).init(self.allocator);
+            defer map.deinit();
+            var vert_it = self.quiver.vertexIterator();
+            while (vert_it.next()) |v| {
+                if (self.vertex_info.get(v)) |info| {
+                    if (!info.frozen) {
+                        try map.put(v, self.spring_F(v, c0, c1, l));
+                    }
+                }
+            }
+
+            vert_it = self.quiver.vertexIterator();
+            while (vert_it.next()) |v| {
+                if (map.get(v)) |map_val| {
+                    if (self.vertex_info.getPtr(v)) |vertex_info| {
+                        vertex_info.pos = vertex_info.pos.add(map_val.mult(delta));
+                    }
+                }
+            }
+        }
     };
 
     pub const PostnikovQuiverParams = struct {
@@ -473,6 +592,60 @@ pub const LabelCollection = struct {
         center_y: f32 = 200,
         radius: f32 = 70,
     };
+
+    //function F0(u::Vector{Float64}, v::Vector{Float64}, c0::Float64)
+    //    return (normalize(v-u)/(norm(v - u)^2/c0))
+    //end
+    //
+    //function F0(u::Vector{Float64}, v::Vector{Float64})
+    //    return F0(u,v,1);
+    //end
+    //
+    //function F1(u::Vector{Float64}, v::Vector{Float64}, c1::Float64)
+    //    #natural length
+    //    l = 0.001
+    //    return normalize(v-u)*(-c1 * (norm(v-u)-l))
+    //end
+    //
+    //function F1(u::Vector{Float64}, v::Vector{Float64})
+    //    return F1(u,v,1);
+    //end
+    //
+    //function F(q::Quiver, v::Vertex, c0::Float64, c1::Float64)
+    //    Force = [0.0,0.0]
+    //
+    //    for u in vertices(q)
+    //        if u == v
+    //            continue
+    //        end
+    //        Force = Force + F0(u.data["position"], v.data["position"], c0)
+    //    end
+    //    for arr in v.termination_arrows
+    //        Force = Force + F1(arr.start.data["position"], v.data["position"], c1)
+    //    end
+    //    for arr in v.start_arrows
+    //        Force = Force + F1(arr.termination.data["position"], v.data["position"], c1)
+    //    end
+    //    return Force
+    //end
+    //
+    //function F(q::Quiver, v::Vertex)
+    //    return F(q,v,1,1);
+    //end
+
+    // function spring_step(q::Quiver,delta::Float64, c0::Float64 ,c1::Float64)
+    //     c = Dict{Vertex, Vector{Float64}}()
+    //     for v in vertices(q)
+    //         if !get(v.data, "springFrozen", false)
+    //             c[v] = F(q, v, c0, c1)
+    //         end
+    //     end
+    //     for v in vertices(q)
+    //         if haskey(c, v)
+    //             v.data["position"] = v.data["position"] + delta * c[v];
+    //         end
+    //     end
+    // end
 
     pub fn getPostnikovQuiver(self: Self, conf: PostnikovQuiverParams) !PostnikovQuiver {
         var prng = std.rand.DefaultPrng.init(@intCast(std.time.milliTimestamp()));
