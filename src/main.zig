@@ -16,7 +16,7 @@ pub fn getAllocator() Allocator {
 
 /// a < b
 // TODO: Find a way to ensure T is of type slice, and that the type insside T has <, >.
-// NOTE: Potentially breaking if used in a bad way
+// NOTE: Potentially breaking if used in a bad way, i.e. not passing in a slice
 pub fn isLessThanAlphabeticallyFct(comptime T: type) fn (void, a: T, b: T) bool {
     return struct {
         pub fn inner(_: void, a: T, b: T) bool {
@@ -447,6 +447,7 @@ pub const LabelCollection = struct {
 
     pub const PostnikovQuiverVertexInfo = struct {
         pos: struct { x: f32, y: f32 },
+        frozen: bool = false,
     };
     pub const PostnikovQuiver = struct {
         const PQSelf = @This();
@@ -467,14 +468,22 @@ pub const LabelCollection = struct {
         }
     };
 
-    pub fn getPostnikovQuiver(self: Self) !PostnikovQuiver {
-        var prng = std.rand.DefaultPrng.init(43);
+    pub const PostnikovQuiverParams = struct {
+        center_x: f32 = 200,
+        center_y: f32 = 200,
+        radius: f32 = 70,
+    };
+
+    pub fn getPostnikovQuiver(self: Self, conf: PostnikovQuiverParams) !PostnikovQuiver {
+        var prng = std.rand.DefaultPrng.init(@intCast(std.time.milliTimestamp()));
         const rand = prng.random();
 
         var p_quiver = PostnikovQuiver.init(self.allocator);
         for (self.collection.items) |label| {
             try p_quiver.quiver.addVertex(label);
-            try p_quiver.vertex_info.put(label, .{ .pos = .{ .x = rand.float(f32) * 200 + 10, .y = rand.float(f32) * 200 + 10 } });
+            const x = rand.float(f32) * conf.radius * std.math.cos(rand.float(f32) * (2 * std.math.pi)) + conf.center_x;
+            const y = rand.float(f32) * conf.radius * std.math.sin(rand.float(f32) * (2 * std.math.pi)) + conf.center_y;
+            try p_quiver.vertex_info.put(label, .{ .pos = .{ .x = x, .y = y } });
         }
 
         var curr_lab: i32 = 0;
@@ -493,6 +502,24 @@ pub const LabelCollection = struct {
                 const next_i = if (i >= clique.items.len - 1) 0 else i + 1;
                 try p_quiver.quiver.addArrow(clique.items[i], clique.items[next_i], curr_lab);
                 curr_lab += 1;
+            }
+        }
+
+        var lab = try self.allocator.alloc(i32, self.k);
+        for (0..self.n) |i| {
+            for (0..self.k) |j| {
+                lab[j] = @intCast(@mod(i + j, self.n));
+                if (lab[j] == 0) lab[j] = @intCast(self.n);
+            }
+            std.mem.sort(i32, lab, {}, comptime std.sort.asc(i32));
+            std.debug.print("out here {any}\n", .{lab});
+
+            if (p_quiver.vertex_info.getPtr(lab)) |info| {
+                std.debug.print("in here {any}\n", .{lab});
+                const x = conf.radius * std.math.cos(@as(f32, @floatFromInt(i)) * (2 * std.math.pi) / @as(f32, @floatFromInt(self.n))) + conf.center_x;
+                const y = conf.radius * std.math.sin(@as(f32, @floatFromInt(i)) * (2 * std.math.pi) / @as(f32, @floatFromInt(self.n))) + conf.center_y;
+                info.pos = .{ .x = x, .y = y };
+                info.frozen = true;
             }
         }
         return p_quiver;
@@ -545,14 +572,41 @@ pub fn main() !void {
     const integer = try std.fmt.parseInt(usize, input, 10);
     std.debug.print("The user entered number: {d}\n", .{integer});
 
-    var a = LabelCollection.init(allocator, integer, 6);
+    var a = LabelCollection.init(allocator, 5, 10);
     defer a.deinit();
-    try a.addLabel(&[3]i32{ 1, 25, 22 });
-    try a.addLabel(&[3]i32{ 1, 3, 4 });
-    try a.addLabel(&[_]i32{ 25, 4, 1 });
-    try a.addLabel(&[_]i32{ 22, 4, 1 });
-    try a.addLabel(&.{ 3, 5, 1 });
-    try a.addLabel(&[_]i32{ 1, 2, 3 });
+    try a.addLabel(&[_]i32{ 1, 2, 3, 4, 6 });
+    try a.addLabel(&[_]i32{ 1, 6, 7, 8, 9 });
+    try a.addLabel(&[_]i32{ 1, 2, 3, 4, 7 });
+    try a.addLabel(&[_]i32{ 2, 6, 7, 8, 9 });
+    try a.addLabel(&[_]i32{ 1, 2, 3, 4, 9 });
+    try a.addLabel(&[_]i32{ 4, 6, 7, 8, 9 });
+    try a.addLabel(&[_]i32{ 1, 2, 3, 7, 9 });
+    try a.addLabel(&[_]i32{ 2, 4, 6, 7, 8 });
+    try a.addLabel(&[_]i32{ 1, 2, 3, 8, 9 });
+    try a.addLabel(&[_]i32{ 3, 4, 6, 7, 8 });
+    try a.addLabel(&[_]i32{ 1, 2, 4, 7, 9 });
+    try a.addLabel(&[_]i32{ 2, 4, 6, 7, 9 });
+    try a.addLabel(&[_]i32{ 1, 2, 7, 8, 9 });
+    try a.addLabel(&[_]i32{ 2, 3, 4, 6, 7 });
+    try a.addLabel(&[_]i32{ 2, 3, 4, 7, 9 });
+    try a.addLabel(&[_]i32{ 2, 4, 7, 8, 9 });
+    try a.addLabel(&[_]i32{ 1, 2, 3, 4, 5 });
+    try a.addLabel(&[_]i32{ 2, 3, 4, 5, 6 });
+    try a.addLabel(&[_]i32{ 3, 4, 5, 6, 7 });
+    try a.addLabel(&[_]i32{ 4, 5, 6, 7, 8 });
+    try a.addLabel(&[_]i32{ 5, 6, 7, 8, 9 });
+    try a.addLabel(&[_]i32{ 6, 7, 8, 9, 10 });
+    try a.addLabel(&[_]i32{ 1, 7, 8, 9, 10 });
+    try a.addLabel(&[_]i32{ 1, 2, 8, 9, 10 });
+    try a.addLabel(&[_]i32{ 1, 2, 3, 9, 10 });
+    try a.addLabel(&[_]i32{ 1, 2, 3, 4, 10 });
+
+    //try a.addLabel(&[3]i32{ 1, 25, 22 });
+    //try a.addLabel(&[3]i32{ 1, 3, 4 });
+    //try a.addLabel(&[_]i32{ 25, 4, 1 });
+    //try a.addLabel(&[_]i32{ 22, 4, 1 });
+    //try a.addLabel(&.{ 3, 5, 1 });
+    //try a.addLabel(&[_]i32{ 1, 2, 3 });
     std.debug.print("k = {any}\n", .{a.collection.items[0].len});
 
     a.print();
@@ -594,7 +648,7 @@ pub fn main() !void {
     std.debug.print("{any}\n", .{map.get(&[_]i32{ 1, 4, 2 })});
 
     std.debug.print("\n" ** 4, .{});
-    var p_quiver = try a.getPostnikovQuiver();
+    var p_quiver = try a.getPostnikovQuiver(.{ .center_x = 200, .center_y = 200, .radius = 190 });
     defer p_quiver.deinit();
 
     var v_it = p_quiver.quiver.vertexIterator();
