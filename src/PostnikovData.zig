@@ -12,7 +12,7 @@ const Helpers = @import("vendor/graph.zig/src/helpers.zig");
 pub const PostnikovPlabicGraph = struct {
     pub const PostnikovPlabicGraphVertexInfo = struct {
         pos: Pos2,
-        color: enum { black, white },
+        color: enum { edge, black, white },
         clique: std.ArrayList([]const i32),
     };
 
@@ -54,8 +54,8 @@ pub const PostnikovPlabicGraph = struct {
         var p_quiver = Self.init(allocator);
         p_quiver.labelCollection = label_collection;
 
-        const white_cliques: std.ArrayList(std.ArrayList([]const i32)) = try label_collection.getWhiteCliques();
-        const black_cliques: std.ArrayList(std.ArrayList([]const i32)) = try label_collection.getBlackCliques();
+        const white_cliques: std.ArrayList(std.ArrayList([]const i32)) = try label_collection.getWhiteCliquesSorted();
+        const black_cliques: std.ArrayList(std.ArrayList([]const i32)) = try label_collection.getBlackCliquesSorted();
         for (white_cliques.items, 0..) |clique, i| {
             const name: []const u8 = try std.fmt.allocPrint(allocator, "w{d}", .{i});
             try p_quiver.quiver.addVertex(name);
@@ -92,29 +92,39 @@ pub const PostnikovPlabicGraph = struct {
             }
         }
 
-        //for (0..label_collection.n) |i| {
-        //    const name: []const u8 = try std.fmt.allocPrint(allocator, "{d}", .{i});
-        //    try p_quiver.quiver.addVertex(name);
-        //    try p_quiver.vertex_info.put(name, .{
-        //        .pos = .{ .x = 0, .y = 0 },
-        //        .color = .black,
-        //        .clique = std.ArrayList([]const i32).init(allocator),
-        //    });
-        //}
+        for (0..label_collection.n) |i| {
+            const name: []const u8 = try std.fmt.allocPrint(allocator, "{d}", .{i});
+            try p_quiver.quiver.addVertex(name);
+            var m_clique = std.ArrayList([]const i32).init(allocator);
+            try m_clique.append(try label_collection.getProjectivePtrStartingAt(@as(i32, @intCast(i)) + 2) orelse continue);
+            try m_clique.append(try label_collection.getProjectivePtrStartingAt(@as(i32, @intCast(i)) + 1) orelse continue);
+            std.mem.sort([]const i32, m_clique.items, {}, LabelFct.isLessThanAlphabeticallyFct([]const i32));
+            try p_quiver.vertex_info.put(name, .{
+                .pos = .{ .x = 0, .y = 0 },
+                .color = .edge,
+                .clique = m_clique,
+            });
+        }
 
-        //var projs = try label_collection.getProjectiveLabels();
-        //defer projs.deinit();
-        //var proj_bound_iterator = LabelFct.boundaryOfSliceIterator([]i32);
-        //while (proj_bound_iterator.next()) |bound| {
-        //    std.mem.sort([]const i32, &bound, {}, LabelFct.isLessThanAlphabeticallyFct([]const i32));
-        //    var plabic_vert_it = p_quiver.quiver.vertexIterator();
-        //    while (plabic_vert_it.next()) |v| {
-        //        const v_info = p_quiver.vertex_info.get(v) orelse continue;
-        //        if (LabelFct.isSubsetAssumeSorted([]const i32, bound, v_info.clique)){
-        //            p_quiver.quiver.addArrow()
-        //        }
-        //    }
-        //}
+        var vert_num: usize = 0;
+        var projs = try label_collection.getProjectiveLabels();
+        defer projs.deinit();
+        var proj_bound_iterator = LabelFct.boundaryOfSliceIterator([]const i32).init(projs.items);
+        while (proj_bound_iterator.next()) |bound| {
+            std.mem.sort([]const i32, @constCast(&bound), {}, LabelFct.isLessThanAlphabeticallyFct([]const i32));
+            var plabic_vert_it = p_quiver.quiver.vertexIterator();
+            while (plabic_vert_it.next()) |v| {
+                const v_info = p_quiver.vertex_info.get(v) orelse continue;
+                if (v_info.clique.items.len > 2 and LabelFct.isSubsetAssumeSorted([]const i32, &bound, v_info.clique.items)) {
+                    const name: []const u8 = try std.fmt.allocPrint(allocator, "{d}", .{vert_num});
+
+                    defer allocator.free(name);
+                    try p_quiver.quiver.addArrow(name, v, arr_num);
+                    vert_num += 1;
+                    arr_num += 1;
+                }
+            }
+        }
 
         return p_quiver;
     }
@@ -131,8 +141,13 @@ pub const PostnikovPlabicGraph = struct {
                 pos = pos.add(q_info.pos);
                 num += 1;
             }
-            pos = pos.div(num);
-            vert_info.pos = pos;
+            if (num > 0) {
+                pos = pos.div(num);
+                vert_info.pos = pos;
+            }
+            if (num == 2) {
+                vert_info.pos = pos.projectToCircleBoundary(.{ .x = postnikov_quiver.conf.center_x, .y = postnikov_quiver.conf.center_y }, postnikov_quiver.conf.radius);
+            }
         }
     }
 };
@@ -158,6 +173,7 @@ pub const PostnikovQuiver = struct {
     quiver: Quiver([]const i32, i32),
     vertex_info: hashing.SliceHashMap(i32, PostnikovQuiverVertexInfo),
     labelCollection: ?LabelCollection = null,
+    conf: PostnikovQuiverParams = .{},
 
     pub fn init(allocator: Allocator) Self {
         const quiv = Quiver([]const i32, i32).init(allocator);
@@ -175,6 +191,7 @@ pub const PostnikovQuiver = struct {
 
         var p_quiver = PostnikovQuiver.init(allocator);
         p_quiver.labelCollection = label_collection;
+        p_quiver.conf = conf;
 
         for (label_collection.collection.items) |label| {
             try p_quiver.quiver.addVertex(label);

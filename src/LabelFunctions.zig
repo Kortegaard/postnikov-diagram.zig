@@ -300,6 +300,12 @@ pub fn boundaryOfSliceIterator(comptime T: type) type {
     };
 }
 
+pub fn modPlusOne(k: i32, n: i32) i32 {
+    const tmp = @mod(k, n);
+    if (tmp == 0) return n;
+    return tmp;
+}
+
 pub fn boundaryIntersectionSize(comptime T: type, sl1: []T, sl2: []T) usize {
     const BoundaryIterator = boundaryOfSliceIterator(T);
 

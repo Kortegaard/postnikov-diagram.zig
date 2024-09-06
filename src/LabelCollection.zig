@@ -73,6 +73,22 @@ pub fn isNonCrossing(self: Self) bool {
     return true;
 }
 
+pub fn getProjectivePtrStartingAt(self: Self, point: i32) !?[]const i32 {
+    const tmp = try self.allocator.alloc(i32, self.k);
+    defer self.allocator.free(tmp);
+    for (0..self.k) |i| {
+        const curr_point = LabelFct.modPlusOne(point + @as(i32, @intCast(i)), @intCast(self.n));
+        tmp[i] = @as(i32, @intCast(curr_point));
+    }
+    std.mem.sort(i32, tmp[0..self.k], {}, comptime std.sort.asc(i32));
+    for (self.collection.items) |el| {
+        if (std.mem.eql(i32, tmp[0..], el)) {
+            return el;
+        }
+    }
+    return null;
+}
+
 // TODO: Test
 pub fn isMaximalNonCrossing(self: Self) bool {
     return self.collection.len == self.k * (self.n - self.k) + 1 and self.isNonCrossing();

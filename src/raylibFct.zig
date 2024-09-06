@@ -51,6 +51,7 @@ pub fn raylibShowPostnikovQuiver(allocator: Allocator, p_quiver: *PostnikovQuive
                 if (plabic.vertex_info.get(v)) |inf| {
                     if (rl.checkCollisionPointCircle(rl.getMousePosition(), rl.Vector2{ .x = inf.pos.x, .y = inf.pos.y }, 8)) {
                         std.debug.print("{any}\n", .{inf.clique.items});
+                        std.debug.print("{any}\n", .{plabic.quiver.getArrowsOut(v)});
                     }
                 }
             }
@@ -86,8 +87,11 @@ pub fn drawPostnikovQuiver(p_quiver: *PostnikovQuiver) void {
 pub fn drawPlabicGraph(plabic: *PostnikovPlabicGraph) void {
     var arr_it2 = plabic.quiver.arrowIterator();
     while (arr_it2.next()) |ar| {
-        const from_info = plabic.vertex_info.get(ar.from) orelse continue;
-        const to_info = plabic.vertex_info.get(ar.to) orelse continue;
+        const from_info = plabic.vertex_info.get(ar.from) orelse {
+            std.debug.print("from: '{s}', to: '{s}'\n", .{ ar.from, ar.to });
+            @panic("hej");
+        };
+        const to_info = plabic.vertex_info.get(ar.to) orelse @panic("hej");
         rl.drawLine(@intFromFloat(from_info.pos.x), @intFromFloat(from_info.pos.y), @intFromFloat(to_info.pos.x), @intFromFloat(to_info.pos.y), rl.Color.light_gray);
     }
     var vert_it2 = plabic.quiver.vertexIterator();

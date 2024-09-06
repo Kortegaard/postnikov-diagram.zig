@@ -11,6 +11,9 @@ pub const Pos2 = struct {
     pub fn norm(self: Pos2) f32 {
         return std.math.sqrt(self.normSquared());
     }
+    pub fn eql(self: Pos2, other: Pos2) bool {
+        return self.x == other.x and self.y == other.y;
+    }
 
     pub fn add(self: Pos2, other: Pos2) Pos2 {
         return .{
@@ -51,5 +54,11 @@ pub const Pos2 = struct {
         const _norm = self.norm();
         self.x = self.x / _norm;
         self.y = self.y / _norm;
+    }
+
+    pub fn projectToCircleBoundary(self: Pos2, center: Pos2, radius: f32) Pos2 {
+        if (self.eql(center)) return self.add(.{ .x = radius, .y = 0 });
+        const moved_point = self.subtract(center);
+        return moved_point.mult(radius).div(moved_point.norm()).add(center);
     }
 };
