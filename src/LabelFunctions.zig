@@ -292,7 +292,7 @@ pub fn boundaryOfSliceIterator(comptime T: type) type {
             if (self.sl.len < 2) return null;
             if (self.pos >= self.sl.len) return null;
             self.pos += 1;
-            if (self.pos >= self.pos) {
+            if (self.pos >= self.sl.len) {
                 return [2]T{ self.sl[self.pos - 1], self.sl[0] };
             }
             return [2]T{ self.sl[self.pos - 1], self.sl[self.pos] };
@@ -309,6 +309,7 @@ pub fn boundaryIntersectionSize(comptime T: type, sl1: []T, sl2: []T) usize {
     while (it1.next()) |b1| {
         var it2 = BoundaryIterator.init(sl2);
         while (it2.next()) |b2| {
+            //std.debug.print("{any}\n{any}\n\n", .{ b1, b2 });
             if (isEqual(T, b1[0], b2[0]) and isEqual(T, b1[1], b2[1])) {
                 count += 1;
             } else if (isEqual(T, b1[0], b2[1]) and isEqual(T, b1[1], b2[0])) {
