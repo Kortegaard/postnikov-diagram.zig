@@ -1,4 +1,5 @@
 const std = @import("std");
+const Spline2 = @import("helpers.zig").Spline2;
 const rl = @import("raylib");
 const Allocator = std.mem.Allocator;
 //const PostnikovQuiver = @import("./main.zig").LabelCollection.PostnikovQuiver;
@@ -18,7 +19,7 @@ pub fn raylibShowPostnikovQuiver(allocator: Allocator, p_quiver: *PostnikovQuive
     rl.initWindow(screenWidth, screenHeight, "raylib-zig [shapes] example - raylib logo using shapes");
     defer rl.closeWindow(); // Close window and OpenGL context
 
-    rl.setTargetFPS(60); // Set our game to run at 60 frames-per-second
+    //rl.setTargetFPS(60); // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
 
     const num = allocator.create(u8) catch {
@@ -26,8 +27,11 @@ pub fn raylibShowPostnikovQuiver(allocator: Allocator, p_quiver: *PostnikovQuive
     };
     num.* = 100;
     // Main game loop
+    var num2: i32 = 0;
+    var splines: ?std.ArrayList(Spline2) = null;
     while (!rl.windowShouldClose()) { // Detect window close button or ESC key
         try p_quiver.apply_spring_step(0.1, 0.4, 0.4, 50);
+        if (num2 < 300) num2 += 1;
         rl.beginDrawing();
         defer rl.endDrawing();
 
@@ -60,8 +64,21 @@ pub fn raylibShowPostnikovQuiver(allocator: Allocator, p_quiver: *PostnikovQuive
         drawPlabicGraph(plabic);
         drawPostnikovQuiver(p_quiver);
         plabic.setLocationBasedOnPostnikovQuiver(p_quiver.*);
+        if (num2 > 200 and splines == null) {
+            splines = try plabic.getPostnikovDiagramSplines(p_quiver.*);
+        }
+        if (splines) |spls| {
+            for (spls.items, 0..) |spl, i| {
+                rl.drawSplineCatmullRom(spl.points.items, 2, rl.Color.black);
+                if (i != 8) continue;
+            }
+        }
         rl.drawFPS(0, 0);
     }
+    //for (splines.items) |*s| {
+    //    s.deinit();
+    //}
+    //splines.deinit();
     allocator.destroy(num);
 }
 

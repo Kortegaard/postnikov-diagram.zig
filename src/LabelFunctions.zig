@@ -306,6 +306,16 @@ pub fn modPlusOne(k: i32, n: i32) i32 {
     return tmp;
 }
 
+pub fn intersection(allocator: std.mem.Allocator, comptime T: type, sl1: []T, sl2: []T) !std.ArrayList(T) {
+    var m_list = std.ArrayList(T).init(allocator);
+    for (sl1) |b1| {
+        for (sl2) |b2| {
+            if (isEqual(T, b1, b2)) try m_list.append(b1);
+        }
+    }
+    return m_list;
+}
+
 pub fn boundaryIntersectionSize(comptime T: type, sl1: []T, sl2: []T) usize {
     const BoundaryIterator = boundaryOfSliceIterator(T);
 

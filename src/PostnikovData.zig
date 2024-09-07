@@ -2,6 +2,7 @@ const std = @import("std");
 const Quiver = @import("vendor/graph.zig/src/DirectedGraph.zig").Quiver;
 const GenQuiv = @import("vendor/graph.zig/src/DirectedGraph.zig");
 const Pos2 = @import("helpers.zig").Pos2;
+const Spline2 = @import("helpers.zig").Spline2;
 const Allocator = std.mem.Allocator;
 const hashing = @import("hashing.zig");
 const LabelCollection = @import("LabelCollection.zig");
@@ -149,6 +150,102 @@ pub const PostnikovPlabicGraph = struct {
                 vert_info.pos = pos.projectToCircleBoundary(.{ .x = postnikov_quiver.conf.center_x, .y = postnikov_quiver.conf.center_y }, postnikov_quiver.conf.radius);
             }
         }
+    }
+
+    pub fn getPostnikovDiagramSplines(self: *Self, postnikov_quiver: PostnikovQuiver) !std.ArrayList(Spline2) {
+        var vert_it = self.quiver.vertexIterator();
+        var splines = std.ArrayList(Spline2).init(self.allocator);
+        while (vert_it.next()) |v| {
+            var spline = Spline2.init(self.allocator);
+            const v_info = self.vertex_info.get(v) orelse continue;
+            if (v_info.color != .edge) continue;
+            const arr_out = self.quiver.getArrowsOut(v);
+            if (arr_out.len != 1) @panic("Should not be possible to land here");
+            var curr_vertex: []const u8 = arr_out[0].to;
+            const v2_info = self.vertex_info.get(curr_vertex) orelse continue;
+            var curr_info: PostnikovPlabicGraphVertexInfo = v2_info;
+
+            var prev_vertex: []const u8 = v;
+            var prev_info: PostnikovPlabicGraphVertexInfo = v_info;
+            //const info = postnikov_quiver.vertex_info.get(prev_vertex) orelse continue;
+            try spline.appendPos(prev_info.pos);
+            try spline.appendPos(prev_info.pos);
+
+            while (true) {
+                const intersection_of_cliques = try LabelFct.intersection(self.allocator, []const i32, curr_info.clique.items, prev_info.clique.items);
+                //defer intersection_of_cliques.deinit();
+                if (intersection_of_cliques.items.len < 2) continue;
+                const info1 = postnikov_quiver.vertex_info.get(intersection_of_cliques.items[0]) orelse continue;
+                const info2 = postnikov_quiver.vertex_info.get(intersection_of_cliques.items[1]) orelse continue;
+                if (prev_info.clique.items.len > 2 and curr_info.clique.items.len > 2) {
+                    try spline.appendPos(info1.pos.add(info2.pos).div(2));
+                }
+                if (curr_info.color == .edge) {
+                    try spline.appendPos(curr_info.pos);
+                    try spline.appendPos(curr_info.pos);
+                    break;
+                }
+
+                var smallest_angle: f32 = 2 * std.math.pi;
+                var smallest_angle_vertex: []const u8 = undefined;
+                var smallest_angle_info: PostnikovPlabicGraphVertexInfo = undefined;
+                var largest_angle: f32 = -2 * std.math.pi;
+                var largest_angle_vertex: []const u8 = undefined;
+                var largest_angle_info: PostnikovPlabicGraphVertexInfo = undefined;
+
+                //std.debug.print("out: '{s}'\n", .{curr_vertex});
+                const arr_ir1 = self.quiver.getArrowsOut(curr_vertex);
+                for (arr_ir1) |arr| {
+                    if (std.mem.eql(u8, prev_vertex, arr.to)) continue;
+                    const to_info = self.vertex_info.get(arr.to) orelse continue;
+                    var angle = prev_info.pos.angle(curr_info.pos, to_info.pos);
+                    if (angle < 0) angle += 2 * std.math.pi;
+                    //   std.debug.print("angle: '{d}'\n", .{angle});
+                    if (angle < smallest_angle) {
+                        smallest_angle = angle;
+                        smallest_angle_vertex = arr.to;
+                        smallest_angle_info = to_info;
+                    }
+                    if (angle > largest_angle) {
+                        largest_angle = angle;
+                        largest_angle_vertex = arr.to;
+                        largest_angle_info = to_info;
+                    }
+                }
+                const arr_ir2 = self.quiver.getArrowsIn(curr_vertex);
+                for (arr_ir2) |arr| {
+                    if (std.mem.eql(u8, prev_vertex, arr.from)) continue;
+                    const to_info = self.vertex_info.get(arr.from) orelse continue;
+                    var angle = prev_info.pos.angle(curr_info.pos, to_info.pos);
+                    if (angle < 0) angle += 2 * std.math.pi;
+                    //  std.debug.print("angle: '{d}'\n", .{angle});
+                    if (angle < smallest_angle) {
+                        smallest_angle = angle;
+                        smallest_angle_vertex = arr.from;
+                        smallest_angle_info = to_info;
+                    }
+                    if (angle > largest_angle) {
+                        largest_angle = angle;
+                        largest_angle_vertex = arr.from;
+                        largest_angle_info = to_info;
+                    }
+                }
+                prev_vertex = curr_vertex;
+                prev_info = curr_info;
+                if (curr_info.color == .white) {
+                    //  std.debug.print("white\n", .{});
+                    curr_vertex = smallest_angle_vertex;
+                    curr_info = smallest_angle_info;
+                } else if (curr_info.color == .black) {
+                    // std.debug.print("black\n", .{});
+                    curr_vertex = largest_angle_vertex;
+                    curr_info = largest_angle_info;
+                }
+            }
+            try splines.append(spline);
+            std.debug.print("size: {d}\n", .{spline.points.items.len});
+        }
+        return splines;
     }
 };
 
