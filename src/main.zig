@@ -4,8 +4,8 @@ const Allocator = std.mem.Allocator;
 const hashing = @import("hashing.zig");
 const Quiver = @import("vendor/graph.zig/src/DirectedGraph.zig").Quiver;
 const Pos2 = @import("helpers.zig").Pos2;
-const PostnikovQuiver = @import("PostnikovData.zig").PostnikovQuiver;
-const PostnikovPlabicGraph = @import("PostnikovData.zig").PostnikovPlabicGraph;
+const PostnikovQuiver = @import("PostnikovQuiver.zig").PostnikovQuiver;
+const PostnikovPlabicGraph = @import("PostnikovPlabicGraph.zig").PostnikovPlabicGraph;
 const LabelFct = @import("LabelFunctions.zig");
 const LabelCollection = @import("LabelCollection.zig");
 

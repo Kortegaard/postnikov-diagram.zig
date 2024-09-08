@@ -3,8 +3,8 @@ const Spline2 = @import("helpers.zig").Spline2;
 const rl = @import("raylib");
 const Allocator = std.mem.Allocator;
 //const PostnikovQuiver = @import("./main.zig").LabelCollection.PostnikovQuiver;
-const PostnikovQuiver = @import("./PostnikovData.zig").PostnikovQuiver;
-const PostnikovPlabicGraph = @import("./PostnikovData.zig").PostnikovPlabicGraph;
+const PostnikovQuiver = @import("./PostnikovQuiver.zig").PostnikovQuiver;
+const PostnikovPlabicGraph = @import("./PostnikovPlabicGraph.zig").PostnikovPlabicGraph;
 
 var isPressed: bool = false;
 pub fn raylibShowPostnikovQuiver(allocator: Allocator, p_quiver: *PostnikovQuiver, plabic: *PostnikovPlabicGraph) !void {
@@ -69,8 +69,11 @@ pub fn raylibShowPostnikovQuiver(allocator: Allocator, p_quiver: *PostnikovQuive
         }
         if (splines) |spls| {
             for (spls.items, 0..) |spl, i| {
-                rl.drawSplineCatmullRom(spl.points.items, 2, rl.Color.black);
-                if (i != 8) continue;
+                drawSpline(spl);
+                if (i == 8) {
+                    _ = .{};
+                    //const pp = rl.getSplinePointCatmullRom(;
+                }
             }
         }
         rl.drawFPS(0, 0);
@@ -80,6 +83,10 @@ pub fn raylibShowPostnikovQuiver(allocator: Allocator, p_quiver: *PostnikovQuive
     //}
     //splines.deinit();
     allocator.destroy(num);
+}
+
+pub fn drawSpline(spline: Spline2) void {
+    rl.drawSplineCatmullRom(spline.points.items, 2, rl.Color.black);
 }
 
 pub fn drawPostnikovQuiver(p_quiver: *PostnikovQuiver) void {
