@@ -58,13 +58,8 @@ pub fn main() !void {
     try a.addLabel(&[_]i32{ 1, 2, 3, 9, 10 });
     try a.addLabel(&[_]i32{ 1, 2, 3, 4, 10 });
 
-    var p_quiver = try PostnikovQuiver.initFromLabelCollection(allocator, a, .{ .center_x = 200, .center_y = 200, .radius = 190 });
-    defer p_quiver.deinit();
-
-    var plabicGraph = try PostnikovPlabicGraph.initFromLabelCollection(allocator, a, .{});
-    defer plabicGraph.deinit();
-
-    plabicGraph.setLocationBasedOnPostnikovQuiver(p_quiver);
+    const p_quiver = try PostnikovQuiver.initFromLabelCollection(allocator, a, .{ .center_x = 200, .center_y = 200, .radius = 190 });
+    const plabicGraph = try PostnikovPlabicGraph.initFromLabelCollection(allocator, a, .{});
 
     r.init(allocator, p_quiver, plabicGraph);
     try r.raylibShowPostnikovQuiver();

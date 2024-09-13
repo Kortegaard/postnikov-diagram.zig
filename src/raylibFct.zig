@@ -42,6 +42,11 @@ pub fn init(allocator: Allocator, p_quiver: PostnikovQuiver, plabic: PostnikovPl
     };
 }
 
+pub fn deinit() void {
+    p_state.postnikov_quiver.deinit();
+    p_state.plabic_graph.deinit();
+}
+
 pub export fn updateLabelCollection(text: [*c]const u8) void {
     const as_slice: [:0]const u8 = std.mem.span(text);
     const parsed_json = std.json.parseFromSlice([][]i32, alloc, as_slice, .{}) catch {
