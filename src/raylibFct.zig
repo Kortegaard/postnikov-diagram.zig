@@ -5,6 +5,7 @@ const Allocator = std.mem.Allocator;
 //const PostnikovQuiver = @import("./main.zig").LabelCollection.PostnikovQuiver;
 const PostnikovQuiver = @import("./PostnikovQuiver.zig").PostnikovQuiver;
 const PostnikovPlabicGraph = @import("./PostnikovPlabicGraph.zig").PostnikovPlabicGraph;
+const LabelCollection = @import("LabelCollection.zig");
 
 var isPressed: bool = false;
 
@@ -85,6 +86,31 @@ pub export fn updateLabelCollection(text: [*c]const u8) void {
         return;
     }
     std.debug.print("k: {d}, n:{d}, json {any}\n", .{ guessed_k, guessed_n, json });
+
+    var a = LabelCollection.init(alloc, guessed_k, guessed_n);
+
+    for (json) |label| {
+        a.addLabel(label) catch {
+            std.debug.print("Error: Problems constructing label collection\n", .{});
+            return;
+        };
+    }
+    loadNewLabelCollection(a);
+}
+
+pub fn loadNewLabelCollection(label_collection: LabelCollection) void {
+    p_state.postnikov_quiver.deinit();
+    p_state.plabic_graph.deinit();
+
+    p_state.postnikov_quiver = PostnikovQuiver.initFromLabelCollection(alloc, label_collection, .{ .center_x = 200, .center_y = 200, .radius = 190 }) catch {
+        std.debug.print("Error: 1\n", .{});
+        return;
+    };
+    p_state.plabic_graph = PostnikovPlabicGraph.initFromLabelCollection(alloc, label_collection, .{}) catch {
+        std.debug.print("Error: 2\n", .{});
+        return;
+    };
+    std.debug.print("INFO: Changin over\n", .{});
 }
 
 pub fn raylibShowPostnikovQuiver() !void {
@@ -102,13 +128,10 @@ pub fn raylibShowPostnikovQuiver() !void {
     rl.setTargetFPS(120); // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
 
-    const num = alloc.create(u8) catch {
-        return;
-    };
-    num.* = 100;
     // Main game loop
     var num2: i32 = 0;
     var splines: ?std.ArrayList(Spline2) = null;
+
     while (!rl.windowShouldClose()) { // Detect window close button or ESC key
         try p_state.postnikov_quiver.apply_spring_step(0.1, 0.4, 0.4, 50);
         if (num2 < 300) num2 += 1;
@@ -171,7 +194,6 @@ pub fn raylibShowPostnikovQuiver() !void {
     //    s.deinit();
     //}
     //splines.deinit();
-    alloc.destroy(num);
 }
 
 pub fn drawStandardTriangle(pos: rl.Vector2, scale: f32, rotation: f32) void {

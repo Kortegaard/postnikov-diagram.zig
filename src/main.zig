@@ -5,8 +5,8 @@ const hashing = @import("hashing.zig");
 const Quiver = @import("vendor/graph.zig/src/DirectedGraph.zig").Quiver;
 const Pos2 = @import("helpers.zig").Pos2;
 const PostnikovQuiver = @import("PostnikovQuiver.zig").PostnikovQuiver;
-const PostnikovPlabicGraph = @import("PostnikovPlabicGraph.zig").PostnikovPlabicGraph;
 const LabelFct = @import("LabelFunctions.zig");
+const PostnikovPlabicGraph = @import("PostnikovPlabicGraph.zig").PostnikovPlabicGraph;
 const LabelCollection = @import("LabelCollection.zig");
 
 const that = @This();
