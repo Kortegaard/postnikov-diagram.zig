@@ -20,12 +20,13 @@ pub fn getAllocator() Allocator {
 }
 
 const r = @import("./raylibFct.zig");
+
 pub fn main() !void {
     //
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
+    //var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    //const allocator = gpa.allocator();
     //_ = allocatorr;
-    //const allocator = getAllocator();
+    const allocator = getAllocator();
     const input = "3";
 
     const integer = try std.fmt.parseInt(usize, input, 10);

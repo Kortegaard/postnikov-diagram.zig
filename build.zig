@@ -41,6 +41,8 @@ pub fn build(b: *std.Build) !void {
         );
 
         link_step.addArg("-sUSE_OFFSET_CONVERTER");
+        link_step.addArg("-sEXPORTED_FUNCTIONS=_main,_mytest");
+        link_step.addArg("-sEXPORTED_RUNTIME_METHODS=ccall,cwrap");
         b.getInstallStep().dependOn(&link_step.step);
 
         const run_step = try emcc.emscriptenRunStep(b);
