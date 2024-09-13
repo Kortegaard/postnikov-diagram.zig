@@ -9,6 +9,7 @@ const PostnikovPlabicGraph = @import("./PostnikovPlabicGraph.zig").PostnikovPlab
 var isPressed: bool = false;
 
 var cl = rl.Color.red;
+var alloc = std.heap.c_allocator;
 
 const MState = struct {
     // Clique color
@@ -16,11 +17,16 @@ const MState = struct {
     black_clique_color: rl.Color = rl.Color.black,
     clique_edge_color: rl.Color = rl.Color.light_gray,
 
+    clique_vertex_size: f32 = 5,
+    clique_vertex_marked_size: f32 = 8,
+
     // Label collection color
     label_color: rl.Color = rl.Color.red,
     frozen_label_color: rl.Color = rl.Color.blue,
     strand_color: rl.Color = rl.Color.black,
     arrow_color: rl.Color = rl.Color.green,
+    label_vertex_size: f32 = 5,
+    label_vertex_marked_size: f32 = 8,
 };
 
 var p_state: MState = .{};
@@ -30,8 +36,48 @@ pub export fn mytest(testpar: [*c]const u8) void {
     p_state.label_color = rl.Color.blue;
 }
 
+pub export fn updateLabelCollection(text: [*c]const u8) void {
+    const as_slice: [:0]const u8 = std.mem.span(text);
+    const parsed_json = std.json.parseFromSlice([][]i32, alloc, as_slice, .{}) catch {
+        std.debug.print("fail\n", .{});
+        return;
+    };
+    defer parsed_json.deinit();
+    const json = parsed_json.value;
+    if (json.len == 0) {
+        std.debug.print("length 0\n", .{});
+        return;
+    }
+    const guessed_k: usize = json[0].len;
+    if (guessed_k == 0) {
+        std.debug.print("All labels must have length >= 1\n", .{});
+        return;
+    }
+    var guessed_n: usize = 0;
+    for (json) |label| {
+        if (label.len != guessed_k) {
+            std.debug.print("mixed length\n", .{});
+            return;
+        }
+        for (label) |val| {
+            if (val <= 0) {
+                std.debug.print("numbers must be possitive\n", .{});
+                return;
+            }
+            if (val >= guessed_n) {
+                guessed_n = @intCast(val);
+            }
+        }
+    }
+    if (guessed_k >= guessed_n) {
+        std.debug.print("must have that k < n\n", .{});
+        return;
+    }
+    std.debug.print("k: {d}, n:{d}, json {any}\n", .{ guessed_k, guessed_n, json });
+}
+
 pub fn raylibShowPostnikovQuiver(allocator: Allocator, p_quiver: *PostnikovQuiver, plabic: *PostnikovPlabicGraph) !void {
-    const screenWidth = 700;
+    const screenWidth = 400;
     const screenHeight = 400;
 
     rl.setConfigFlags(.{
@@ -39,7 +85,7 @@ pub fn raylibShowPostnikovQuiver(allocator: Allocator, p_quiver: *PostnikovQuive
         .window_highdpi = true,
         //.vsync_hint = true,
     });
-    rl.initWindow(screenWidth, screenHeight, "raylib-zig [shapes] example - raylib logo using shapes");
+    rl.initWindow(screenWidth, screenHeight, "Postnikov App");
     defer rl.closeWindow(); // Close window and OpenGL context
 
     rl.setTargetFPS(120); // Set our game to run at 60 frames-per-second
@@ -58,7 +104,7 @@ pub fn raylibShowPostnikovQuiver(allocator: Allocator, p_quiver: *PostnikovQuive
         rl.beginDrawing();
         defer rl.endDrawing();
 
-        rl.clearBackground(rl.Color.ray_white);
+        rl.clearBackground(rl.Color.white);
 
         if (!isPressed and rl.isMouseButtonDown(.mouse_button_left)) {
             isPressed = true;
@@ -155,9 +201,9 @@ pub fn drawPostnikovQuiver(p_quiver: *PostnikovQuiver) void {
     var vert_it = p_quiver.quiver.vertexIterator();
     while (vert_it.next()) |v| {
         if (p_quiver.vertex_info.get(v)) |inf| {
-            var radius: f32 = 5;
-            if (rl.checkCollisionPointCircle(rl.getMousePosition(), rl.Vector2{ .x = inf.pos.x, .y = inf.pos.y }, 8)) {
-                radius = 8;
+            var radius: f32 = p_state.clique_vertex_size;
+            if (rl.checkCollisionPointCircle(rl.getMousePosition(), rl.Vector2{ .x = inf.pos.x, .y = inf.pos.y }, p_state.label_vertex_marked_size)) {
+                radius = p_state.clique_vertex_marked_size;
             }
             rl.drawCircle(@intFromFloat(inf.pos.x), @intFromFloat(inf.pos.y), radius, if (inf.frozen) p_state.frozen_label_color else p_state.label_color);
         }
@@ -176,9 +222,9 @@ pub fn drawPlabicGraph(plabic: *PostnikovPlabicGraph) void {
     var vert_it2 = plabic.quiver.vertexIterator();
     while (vert_it2.next()) |v| {
         if (plabic.vertex_info.get(v)) |inf| {
-            var radius: f32 = 5;
-            if (rl.checkCollisionPointCircle(rl.getMousePosition(), rl.Vector2{ .x = inf.pos.x, .y = inf.pos.y }, 8)) {
-                radius = 8;
+            var radius: f32 = p_state.clique_vertex_size;
+            if (rl.checkCollisionPointCircle(rl.getMousePosition(), rl.Vector2{ .x = inf.pos.x, .y = inf.pos.y }, p_state.clique_vertex_marked_size)) {
+                radius = p_state.clique_vertex_marked_size;
             }
             rl.drawCircle(@intFromFloat(inf.pos.x), @intFromFloat(inf.pos.y), radius, if (inf.color == .white) p_state.white_clique_color else p_state.black_clique_color);
         }

@@ -41,8 +41,13 @@ pub fn build(b: *std.Build) !void {
         );
 
         link_step.addArg("-sUSE_OFFSET_CONVERTER");
-        link_step.addArg("-sEXPORTED_FUNCTIONS=_main,_mytest");
+        link_step.addArg("-sEXPORTED_FUNCTIONS=_main,_mytest,_updateLabelCollection");
         link_step.addArg("-sEXPORTED_RUNTIME_METHODS=ccall,cwrap");
+
+        // https://emscripten.org/docs/compiling/Deploying-Pages.html?highlight=template
+        link_step.addArg("--shell-file=web/postnikov.html");
+        link_step.addArg("--post-js=web/p.js");
+
         b.getInstallStep().dependOn(&link_step.step);
 
         const run_step = try emcc.emscriptenRunStep(b);

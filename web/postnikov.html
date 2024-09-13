@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Postnikov Quiver</title>
+  </head>
+  <body>
+    <div class="">
+      <canvas id="canvas"></canvas>
+    </div>
+    <div class="container">
+        <textarea id="labelcollection-input" cols="100" rows="6">[[1, 2, 3, 5], [5, 6, 7, 9], [1, 9, 10, 11], [1, 2, 3, 9], [1, 5, 6, 7], [5, 9, 10, 11], [1, 4, 5, 7], [5, 8, 9, 11], [1, 3, 9, 12], [1, 5, 9, 11], [1, 3, 5, 9], [1, 5, 7, 9], [2, 3, 5, 7], [6, 7, 9, 11], [1, 3, 10, 11], [5, 7, 9, 11], [1, 3, 9, 11], [1, 3, 5, 7], [7, 8, 9, 11], [1, 3, 11, 12], [3, 4, 5, 7], [1, 2, 3, 4], [2, 3, 4, 5], [3, 4, 5, 6], [4, 5, 6, 7], [5, 6, 7, 8], [6, 7, 8, 9], [7, 8, 9, 10], [8, 9, 10, 11], [9, 10, 11, 12], [1, 10, 11, 12], [1, 2, 11, 12], [1, 2, 3, 12]]</textarea>
+            <button id="send-lci" onClick="send_lci()">update</button>
+    </div>
+    <script type='text/javascript'>
+
+      var Module = {
+        print: (function() { return (...args) => { var text = args.join(' '); console.log(text); }; })(),
+        canvas: (() => {
+          var canvas = document.getElementById('canvas');
+
+          // As a default initial behavior, pop up an alert when webgl context is lost. To make your
+          // application robust, you may want to override this behavior before shipping!
+          // See http://www.khronos.org/registry/webgl/specs/latest/1.0/#5.15.2
+          canvas.addEventListener("webglcontextlost", (e) => { alert('WebGL context lost. You will need to reload the page.'); e.preventDefault(); }, false);
+
+          return canvas;
+        })(),
+      };
+    </script>
+    {{{ SCRIPT }}}
+    <script type='text/javascript'>
+        // TODO: this is a quickfix, since preamble adds eventlistener that blocks backspace, 
+        // this prevents deleting stuff in textarea
+        // notice: this may cause problem with raylib if keypress needed
+        window.removeEventListener("keydown", GLFW.onKeydown, true);
+
+        function send_lci(){
+            var textar = document.getElementById('labelcollection-input');
+            send_labels(textar.value);
+        }
+    </script>
+  </body>
+
+</html>
+
