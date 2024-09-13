@@ -34,7 +34,12 @@
         // TODO: this is a quickfix, since preamble adds eventlistener that blocks backspace, 
         // this prevents deleting stuff in textarea
         // notice: this may cause problem with raylib if keypress needed
-        window.removeEventListener("keydown", GLFW.onKeydown, true);
+        const removeEventListener = async () => {
+            await new Promise(res => setTimeout(res, 1200));
+            window.removeEventListener("keydown", GLFW.onKeydown, true);
+            console.log("Removing event listener")
+        };
+        window.addEventListener('load', function () { removeEventListener(); });
 
         function send_lci(){
             var textar = document.getElementById('labelcollection-input');
