@@ -42,15 +42,10 @@ pub fn init(allocator: Allocator, p_quiver: PostnikovQuiver, plabic: PostnikovPl
     };
 }
 
-pub export fn mytest(testpar: [*c]const u8) void {
-    std.debug.print("TEt {any}\n", .{testpar[1]});
-    p_state.label_color = rl.Color.blue;
-}
-
 pub export fn updateLabelCollection(text: [*c]const u8) void {
     const as_slice: [:0]const u8 = std.mem.span(text);
     const parsed_json = std.json.parseFromSlice([][]i32, alloc, as_slice, .{}) catch {
-        std.debug.print("fail\n", .{});
+        std.debug.print("Json need to be on for [][]i32\n", .{});
         return;
     };
     defer parsed_json.deinit();
@@ -135,7 +130,7 @@ pub fn raylibShowPostnikovQuiver() !void {
                 if (p_state.plabic_graph.vertex_info.get(v)) |inf| {
                     if (rl.checkCollisionPointCircle(rl.getMousePosition(), rl.Vector2{ .x = inf.pos.x, .y = inf.pos.y }, 8)) {
                         std.debug.print("{any}\n", .{inf.clique.items});
-                        std.debug.print("{any}\n", .{p_state.plabic_graph.quiver.getArrowsOut(v)});
+                        //std.debug.print("{any}\n", .{p_state.plabic_graph.quiver.getArrowsOut(v)});
                     }
                 }
             }
@@ -178,7 +173,6 @@ pub fn drawStandardTriangle(pos: rl.Vector2, scale: f32, rotation: f32) void {
     const p1 = rl.Vector2{ .x = 0.0, .y = -0.5 };
     const p2 = rl.Vector2{ .x = 0.0, .y = 0.5 };
     const p3 = rl.Vector2{ .x = 1.0, .y = 0.0 };
-    //std.debug.print("{d}\n", .{p1.lineAngle(p2)});
     rl.drawTriangle(p1.scale(scale).rotate(-rotation).add(pos), p2.scale(scale).rotate(-rotation).add(pos), p3.scale(scale).rotate(-rotation).add(pos), p_state.strand_color);
 }
 
@@ -188,7 +182,6 @@ pub fn drawStandardTriangleCentered(pos: rl.Vector2, scale: f32, rotation: f32) 
     const p3 = rl.Vector2{ .x = 1.0, .y = 0.0 };
     const center = rl.Vector2{ .x = 0.3, .y = 0.0 };
 
-    //std.debug.print("{d}\n", .{p1.lineAngle(p2)});
     rl.drawTriangle(
         p1.subtract(center).scale(scale).rotate(-rotation).add(pos),
         p2.subtract(center).scale(scale).rotate(-rotation).add(pos),
@@ -224,7 +217,6 @@ pub fn drawPlabicGraph(plabic: *PostnikovPlabicGraph) void {
     var arr_it2 = plabic.quiver.arrowIterator();
     while (arr_it2.next()) |ar| {
         const from_info = plabic.vertex_info.get(ar.from) orelse {
-            //std.debug.print("from: '{s}', to: '{s}'\n", .{ ar.from, ar.to });
             @panic("hej");
         };
         const to_info = plabic.vertex_info.get(ar.to) orelse @panic("hej");
