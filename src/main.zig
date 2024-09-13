@@ -137,10 +137,6 @@ pub fn main() !void {
 
     plabicGraph.setLocationBasedOnPostnikovQuiver(p_quiver);
 
-    //var new_var = [_][5]i32{ .{ 1, 6, 7, 8, 9 }, .{ 2, 6, 7, 8, 9 }, .{ 4, 6, 7, 8, 9 }, .{ 5, 6, 7, 8, 9 }, .{ 6, 7, 8, 9, 10 } };
-    //var new_var2 = [_][5]i32{ .{ 4, 6, 7, 8, 9 }, .{ 4, 5, 6, 7, 8 }, .{ 5, 6, 7, 8, 9 } };
-
-    //const random_variable = LabelFct.boundaryIntersectionSize([5]i32, new_var[0..], new_var2[0..]);
-    //std.debug.print("{any}\n", .{random_variable});
-    try r.raylibShowPostnikovQuiver(allocator, &p_quiver, &plabicGraph);
+    r.init(allocator, p_quiver, plabicGraph);
+    try r.raylibShowPostnikovQuiver();
 }

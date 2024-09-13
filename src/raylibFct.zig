@@ -9,9 +9,10 @@ const PostnikovPlabicGraph = @import("./PostnikovPlabicGraph.zig").PostnikovPlab
 var isPressed: bool = false;
 
 var cl = rl.Color.red;
-var alloc = std.heap.c_allocator;
+var alloc: Allocator = std.heap.c_allocator;
 
 const MState = struct {
+    plabic_graph: PostnikovPlabicGraph,
     // Clique color
     white_clique_color: rl.Color = rl.Color.light_gray,
     black_clique_color: rl.Color = rl.Color.black,
@@ -27,9 +28,19 @@ const MState = struct {
     arrow_color: rl.Color = rl.Color.green,
     label_vertex_size: f32 = 5,
     label_vertex_marked_size: f32 = 8,
-};
 
-var p_state: MState = .{};
+    //
+    postnikov_quiver: PostnikovQuiver,
+};
+var p_state: MState = undefined;
+
+pub fn init(allocator: Allocator, p_quiver: PostnikovQuiver, plabic: PostnikovPlabicGraph) void {
+    alloc = allocator;
+    p_state = .{
+        .plabic_graph = plabic,
+        .postnikov_quiver = p_quiver,
+    };
+}
 
 pub export fn mytest(testpar: [*c]const u8) void {
     std.debug.print("TEt {any}\n", .{testpar[1]});
@@ -76,7 +87,7 @@ pub export fn updateLabelCollection(text: [*c]const u8) void {
     std.debug.print("k: {d}, n:{d}, json {any}\n", .{ guessed_k, guessed_n, json });
 }
 
-pub fn raylibShowPostnikovQuiver(allocator: Allocator, p_quiver: *PostnikovQuiver, plabic: *PostnikovPlabicGraph) !void {
+pub fn raylibShowPostnikovQuiver() !void {
     const screenWidth = 400;
     const screenHeight = 400;
 
@@ -91,7 +102,7 @@ pub fn raylibShowPostnikovQuiver(allocator: Allocator, p_quiver: *PostnikovQuive
     rl.setTargetFPS(120); // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
 
-    const num = allocator.create(u8) catch {
+    const num = alloc.create(u8) catch {
         return;
     };
     num.* = 100;
@@ -99,7 +110,7 @@ pub fn raylibShowPostnikovQuiver(allocator: Allocator, p_quiver: *PostnikovQuive
     var num2: i32 = 0;
     var splines: ?std.ArrayList(Spline2) = null;
     while (!rl.windowShouldClose()) { // Detect window close button or ESC key
-        try p_quiver.apply_spring_step(0.1, 0.4, 0.4, 50);
+        try p_state.postnikov_quiver.apply_spring_step(0.1, 0.4, 0.4, 50);
         if (num2 < 300) num2 += 1;
         rl.beginDrawing();
         defer rl.endDrawing();
@@ -111,30 +122,30 @@ pub fn raylibShowPostnikovQuiver(allocator: Allocator, p_quiver: *PostnikovQuive
         }
         if (isPressed and rl.isMouseButtonReleased(.mouse_button_left)) {
             isPressed = false;
-            var vert_it = p_quiver.quiver.vertexIterator();
+            var vert_it = p_state.postnikov_quiver.quiver.vertexIterator();
             while (vert_it.next()) |v| {
-                if (p_quiver.vertex_info.get(v)) |inf| {
+                if (p_state.postnikov_quiver.vertex_info.get(v)) |inf| {
                     if (rl.checkCollisionPointCircle(rl.getMousePosition(), rl.Vector2{ .x = inf.pos.x, .y = inf.pos.y }, 8)) {
                         std.debug.print("{any}\n", .{v});
                     }
                 }
             }
-            var vert_it2 = plabic.quiver.vertexIterator();
+            var vert_it2 = p_state.plabic_graph.quiver.vertexIterator();
             while (vert_it2.next()) |v| {
-                if (plabic.vertex_info.get(v)) |inf| {
+                if (p_state.plabic_graph.vertex_info.get(v)) |inf| {
                     if (rl.checkCollisionPointCircle(rl.getMousePosition(), rl.Vector2{ .x = inf.pos.x, .y = inf.pos.y }, 8)) {
                         std.debug.print("{any}\n", .{inf.clique.items});
-                        std.debug.print("{any}\n", .{plabic.quiver.getArrowsOut(v)});
+                        std.debug.print("{any}\n", .{p_state.plabic_graph.quiver.getArrowsOut(v)});
                     }
                 }
             }
         }
 
-        drawPlabicGraph(plabic);
-        drawPostnikovQuiver(p_quiver);
-        plabic.setLocationBasedOnPostnikovQuiver(p_quiver.*);
+        drawPlabicGraph(&p_state.plabic_graph);
+        drawPostnikovQuiver(&p_state.postnikov_quiver);
+        p_state.plabic_graph.setLocationBasedOnPostnikovQuiver(p_state.postnikov_quiver);
         if (num2 > 160 and splines == null) {
-            splines = try plabic.getPostnikovDiagramSplines(p_quiver.*);
+            splines = try p_state.plabic_graph.getPostnikovDiagramSplines(p_state.postnikov_quiver);
         }
         if (splines) |spls| {
             for (spls.items, 0..) |spl, i| {
@@ -160,7 +171,7 @@ pub fn raylibShowPostnikovQuiver(allocator: Allocator, p_quiver: *PostnikovQuive
     //    s.deinit();
     //}
     //splines.deinit();
-    allocator.destroy(num);
+    alloc.destroy(num);
 }
 
 pub fn drawStandardTriangle(pos: rl.Vector2, scale: f32, rotation: f32) void {
