@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Postnikov Quiver</title>
+    <link rel="stylesheet" type="text/css" href="out.css">
   </head>
   <body>
     <style>
@@ -11,26 +12,41 @@
             color: red;
         }
     </style>
-    <div class="">
-      <canvas id="canvas"></canvas>
+    <div class="container mx-auto">
+          <canvas class="mx-auto" id="canvas"></canvas>
     </div>
-    <div class="container">
-        <textarea id="labelcollection-input" autocomplete="off" cols="100" rows="6">[[1, 2, 3, 5], [5, 6, 7, 9], [1, 9, 10, 11], [1, 2, 3, 9], [1, 5, 6, 7], [5, 9, 10, 11], [1, 4, 5, 7], [5, 8, 9, 11], [1, 3, 9, 12], [1, 5, 9, 11], [1, 3, 5, 9], [1, 5, 7, 9], [2, 3, 5, 7], [6, 7, 9, 11], [1, 3, 10, 11], [5, 7, 9, 11], [1, 3, 9, 11], [1, 3, 5, 7], [7, 8, 9, 11], [1, 3, 11, 12], [3, 4, 5, 7], [1, 2, 3, 4], [2, 3, 4, 5], [3, 4, 5, 6], [4, 5, 6, 7], [5, 6, 7, 8], [6, 7, 8, 9], [7, 8, 9, 10], [8, 9, 10, 11], [9, 10, 11, 12], [1, 10, 11, 12], [1, 2, 11, 12], [1, 2, 3, 12]]</textarea>
-            <button id="send-lci" onClick="send_lci()">update</button>
-    </div>
-    <div class="container">
-        <div> <input type="checkbox" checked autocomplete="off" onChange="setShowPlabicGraph(this)"> show plabic graph </div>
-        <div> <input type="checkbox" checked autocomplete="off" onChange="setShowQuiver(this)"> Show Quiver</div>
-        <div> <input type="checkbox" checked autocomplete="off" onChange="setShowStrands(this)"> Show Strands</div>
-    </div>
-    <div class="container update-from-seed ufs">
-        <div>
-            Constuct from standard seed 
+    <div class="w-[50rem] mx-auto mb-10">
+        <div class="">
+            <h3 class="mb-4 font-semibold text-gray-900 dark:text-white">Set label collection</h3>
+            <div class="">
+
+            <textarea class="w-full h-32 border border-blue-gray-200 resize-y rounded-md"  id="labelcollection-input" autocomplete="off">[[1, 2, 3, 5], [5, 6, 7, 9], [1, 9, 10, 11], [1, 2, 3, 9], [1, 5, 6, 7], [5, 9, 10, 11], [1, 4, 5, 7], [5, 8, 9, 11], [1, 3, 9, 12], [1, 5, 9, 11], [1, 3, 5, 9], [1, 5, 7, 9], [2, 3, 5, 7], [6, 7, 9, 11], [1, 3, 10, 11], [5, 7, 9, 11], [1, 3, 9, 11], [1, 3, 5, 7], [7, 8, 9, 11], [1, 3, 11, 12], [3, 4, 5, 7], [1, 2, 3, 4], [2, 3, 4, 5], [3, 4, 5, 6], [4, 5, 6, 7], [5, 6, 7, 8], [6, 7, 8, 9], [7, 8, 9, 10], [8, 9, 10, 11], [9, 10, 11, 12], [1, 10, 11, 12], [1, 2, 11, 12], [1, 2, 3, 12]]</textarea>
+            </div>
+            <div class="">
+                <button class="btn btn-blue" id="send-lci" onClick="send_lci()">update</button>
+            </div>
         </div>
-        <div class="errors" id="ufs-error"> </div>
-        k <input type="text" checked id="ufss_k" autocomplete="off">
-        n <input type="text" checked id="ufss_n" autocomplete="off">
-        <button onClick="updateFromStandardSeed()">update</button>
+        <hr class="h-px mt-4 mb-2 bg-gray-200 border-0 dark:bg-gray-700"/>
+        <div class="">
+            <div> <input type="checkbox" checked autocomplete="off" onChange="setShowPlabicGraph(this)"> Show plabic graph </div>
+            <div> <input type="checkbox" checked autocomplete="off" onChange="setShowQuiver(this)"> Show Quiver</div>
+            <div> <input type="checkbox" checked autocomplete="off" onChange="setShowStrands(this)"> Show Strands</div>
+        </div>
+        <hr class="h-px mt-4 mb-2 bg-gray-200 border-0 dark:bg-gray-700"/>
+        <div class=" update-from-seed ufs">
+            <h3 class="mb-4 text-lg font-bold text-gray-500"> Constuct from standard seed </h3>
+
+            <label for="ufss_k">k</label> <input class="ml-2 mr-6 text-sm border rounded-md px-3 py-2 border-gray-700 h-8" type="text" checked name="ufss_k" id="ufss_k" autocomplete="off">
+            <label for="ufss_n">n</label> <input class="ml-2 mr-6 text-sm border rounded-md px-3 py-2 border-gray-700 h-8" type="text" checked name="ufss_n" id="ufss_n" autocomplete="off">
+            <br class="mb-4"/>
+
+            <div class="flex">
+                <button class="btn btn-blue mr-4" onClick="updateFromStandardSeed()">update</button>
+                <div class="errors mb-2 h-8" id="ufs-error"> 
+                </div>
+            </div>
+
+        </div>
     </div>
     <script type='text/javascript'>
 
