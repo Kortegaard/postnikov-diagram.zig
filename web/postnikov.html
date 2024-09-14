@@ -6,6 +6,11 @@
     <title>Postnikov Quiver</title>
   </head>
   <body>
+    <style>
+        .errors {
+            color: red;
+        }
+    </style>
     <div class="">
       <canvas id="canvas"></canvas>
     </div>
@@ -18,10 +23,11 @@
         <div> <input type="checkbox" checked autocomplete="off" onChange="setShowQuiver(this)"> Show Quiver</div>
         <div> <input type="checkbox" checked autocomplete="off" onChange="setShowStrands(this)"> Show Strands</div>
     </div>
-    <div class="container">
+    <div class="container update-from-seed ufs">
         <div>
             Constuct from standard seed 
         </div>
+        <div class="errors" id="ufs-error"> </div>
         k <input type="text" checked id="ufss_k" autocomplete="off">
         n <input type="text" checked id="ufss_n" autocomplete="off">
         <button onClick="updateFromStandardSeed()">update</button>
@@ -74,9 +80,28 @@
         function updateFromStandardSeed(){
             var n_val = document.getElementById('ufss_n').value;
             var k_val = document.getElementById('ufss_k').value;
-             
+
             var n = parseInt(n_val, 10)
             var k = parseInt(k_val, 10)
+
+            var error_el = document.getElementById('ufs-error');
+            if(isNaN(n) || isNaN(k)){
+                // input must be numbers;
+                error_el.innerHTML = "'k' and 'n' must be numbers";
+                return;
+            }
+
+            if(k <= 0 || n <= 0){
+                // numbers must be positive
+                error_el.innerHTML = "'k' and 'n' must be positive numbers";
+                return;
+            }
+
+            if(k >= n){
+                // we must have that k < n
+                error_el.innerHTML = "Numbers has to satisfy that k < n";
+                return;
+            }
 
             z_updateFromStandardSeed(k,n);
         }
