@@ -1,25 +1,24 @@
-// copied from https://github.com/Not-Nik/raylib-zig/blob/devel/emcc.zig
 // raylib-zig (c) Nikolas Wipper 2020-2024
 
 const std = @import("std");
 const builtin = @import("builtin");
 
 const emccOutputDir = "zig-out" ++ std.fs.path.sep_str ++ "htmlout" ++ std.fs.path.sep_str;
-pub var emccOutputFile = "myfile.html";
+const emccOutputFile = "index.html";
 pub fn emscriptenRunStep(b: *std.Build) !*std.Build.Step.Run {
     // Find emrun.
-    //if (b.sysroot == null) {
-    //    @panic("Pass '--sysroot \"[path to emsdk installation]/upstream/emscripten\"'");
-    //}
+    if (b.sysroot == null) {
+        @panic("Pass '--sysroot \"[path to emsdk installation]/upstream/emscripten\"'");
+    }
     // If compiling on windows , use emrun.bat.
     const emrunExe = switch (builtin.os.tag) {
         .windows => "emrun.bat",
         else => "emrun",
     };
-    const emrun_run_arg = try b.allocator.alloc(u8, emrunExe.len);
+    const emrun_run_arg = try b.allocator.alloc(u8, b.sysroot.?.len + emrunExe.len + 1);
     defer b.allocator.free(emrun_run_arg);
 
-    _ = try std.fmt.bufPrint(emrun_run_arg, "{s}", .{emrunExe});
+    _ = try std.fmt.bufPrint(emrun_run_arg, "{s}" ++ std.fs.path.sep_str ++ "{s}", .{ b.sysroot.?, emrunExe });
 
     const run_cmd = b.addSystemCommand(&[_][]const u8{ emrun_run_arg, emccOutputDir ++ emccOutputFile });
     return run_cmd;
@@ -75,20 +74,20 @@ pub fn linkWithEmscripten(
     itemsToLink: []const *std.Build.Step.Compile,
 ) !*std.Build.Step.Run {
     // Raylib uses --sysroot in order to find emscripten, so do the same here.
-    //if (b.sysroot == null) {
-    //    @panic("Pass '--sysroot \"[path to emsdk installation]/upstream/emscripten\"'");
-    //}
+    if (b.sysroot == null) {
+        @panic("Pass '--sysroot \"[path to emsdk installation]/upstream/emscripten\"'");
+    }
     const emccExe = switch (builtin.os.tag) {
         .windows => "emcc.bat",
         else => "emcc",
     };
-    var emcc_run_arg = try b.allocator.alloc(u8, emccExe.len);
+    var emcc_run_arg = try b.allocator.alloc(u8, b.sysroot.?.len + emccExe.len + 1);
     defer b.allocator.free(emcc_run_arg);
 
     emcc_run_arg = try std.fmt.bufPrint(
         emcc_run_arg,
-        "{s}",
-        .{emccExe},
+        "{s}" ++ std.fs.path.sep_str ++ "{s}",
+        .{ b.sysroot.?, emccExe },
     );
 
     // Create the output directory because emcc can't do it.
@@ -110,8 +109,7 @@ pub fn linkWithEmscripten(
         "-sUSE_GLFW=3",
         "-sASYNCIFY",
         "-O3",
-        "-g1",
-        // "--emrun",
+        "--emrun",
     });
     return emcc_command;
 }
@@ -139,3 +137,4 @@ const webhack_c =
     \\void __stack_chk_fail(void){}
     \\int errno;
 ;
+
