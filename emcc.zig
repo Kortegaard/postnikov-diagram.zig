@@ -4,7 +4,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const emccOutputDir = "zig-out" ++ std.fs.path.sep_str ++ "htmlout" ++ std.fs.path.sep_str;
-const emccOutputFile = "index.html";
+const emccOutputFile = "myfile.html";
 pub fn emscriptenRunStep(b: *std.Build) !*std.Build.Step.Run {
     // Find emrun.
     if (b.sysroot == null) {
@@ -108,8 +108,9 @@ pub fn linkWithEmscripten(
         "-sFULL-ES3=1",
         "-sUSE_GLFW=3",
         "-sASYNCIFY",
+        "-g1",
         "-O3",
-        "--emrun",
+        //"--emrun",
     });
     return emcc_command;
 }
@@ -137,4 +138,3 @@ const webhack_c =
     \\void __stack_chk_fail(void){}
     \\int errno;
 ;
-
