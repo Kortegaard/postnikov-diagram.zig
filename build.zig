@@ -41,7 +41,7 @@ pub fn build(b: *std.Build) !void {
         );
 
         link_step.addArg("-sUSE_OFFSET_CONVERTER");
-        link_step.addArg("-sEXPORTED_FUNCTIONS=_main,_updateLabelCollection");
+        link_step.addArg("-sEXPORTED_FUNCTIONS=_main,_updateLabelCollection,_setShowPlabicGraph,_setShowQuiver,_setShowStrands");
         link_step.addArg("-sEXPORTED_RUNTIME_METHODS=ccall,cwrap");
 
         // https://emscripten.org/docs/compiling/Deploying-Pages.html?highlight=template
