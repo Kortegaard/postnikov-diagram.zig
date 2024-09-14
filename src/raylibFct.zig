@@ -32,7 +32,56 @@ const MState = struct {
 
     //
     postnikov_quiver: PostnikovQuiver,
+
+    //
+    spring_done: bool = false,
+    frame_since_spring_start: i32 = 0,
+
+    //
+    strands_constructed: bool = false,
+
+    strands: ?std.ArrayList(Spline2) = null,
+
+    pub fn update(self: *@This()) !void {
+        if (!self.spring_done) {
+            try p_state.postnikov_quiver.apply_spring_step(0.1, 0.4, 0.4, 50);
+        }
+        if (self.frame_since_spring_start == 120) {
+            self.spring_done = true;
+        }
+        if (self.frame_since_spring_start < 2000) {
+            self.frame_since_spring_start += 1;
+        }
+        if (self.spring_done and self.strands == null) {
+            self.strands = try self.plabic_graph.getPostnikovDiagramSplines(p_state.postnikov_quiver);
+        }
+    }
+
+    pub fn reset(self: *@This()) void {
+        self.postnikov_quiver.deinit();
+        self.plabic_graph.deinit();
+        if (self.strands) |*st| {
+            for (st.items) |*strand| {
+                strand.deinit();
+            }
+            st.deinit();
+        }
+        self.strands = null;
+        self.strands_constructed = false;
+    }
+
+    pub fn setLabelCollection(self: *@This(), lc: LabelCollection) !void {
+        self.postnikov_quiver = try PostnikovQuiver.initFromLabelCollection(alloc, lc, .{ .center_x = 200, .center_y = 200, .radius = 190 });
+        self.plabic_graph = try PostnikovPlabicGraph.initFromLabelCollection(alloc, lc, .{});
+        self.runSpring();
+    }
+
+    pub fn runSpring(self: *@This()) void {
+        self.spring_done = false;
+        self.frame_since_spring_start = 0;
+    }
 };
+
 var p_state: MState = undefined;
 
 pub fn init(allocator: Allocator, p_quiver: PostnikovQuiver, plabic: PostnikovPlabicGraph) void {
@@ -99,14 +148,8 @@ pub export fn updateLabelCollection(text: [*c]const u8) void {
 }
 
 pub fn loadNewLabelCollection(label_collection: LabelCollection) void {
-    p_state.postnikov_quiver.deinit();
-    p_state.plabic_graph.deinit();
-
-    p_state.postnikov_quiver = PostnikovQuiver.initFromLabelCollection(alloc, label_collection, .{ .center_x = 200, .center_y = 200, .radius = 190 }) catch {
-        std.debug.print("Error: 1\n", .{});
-        return;
-    };
-    p_state.plabic_graph = PostnikovPlabicGraph.initFromLabelCollection(alloc, label_collection, .{}) catch {
+    p_state.reset();
+    p_state.setLabelCollection(label_collection) catch {
         std.debug.print("Error: 2\n", .{});
         return;
     };
@@ -129,16 +172,9 @@ pub fn raylibShowPostnikovQuiver() !void {
     //--------------------------------------------------------------------------------------
 
     // Main game loop
-    var num2: i32 = 0;
-    var splines: ?std.ArrayList(Spline2) = null;
 
     while (!rl.windowShouldClose()) { // Detect window close button or ESC key
-        try p_state.postnikov_quiver.apply_spring_step(0.1, 0.4, 0.4, 50);
-        if (num2 < 300) num2 += 1;
-        rl.beginDrawing();
-        defer rl.endDrawing();
-
-        rl.clearBackground(rl.Color.white);
+        try p_state.update();
 
         if (!isPressed and rl.isMouseButtonDown(.mouse_button_left)) {
             isPressed = true;
@@ -164,13 +200,15 @@ pub fn raylibShowPostnikovQuiver() !void {
             }
         }
 
+        rl.beginDrawing();
+        defer rl.endDrawing();
+
+        rl.clearBackground(rl.Color.white);
+
         drawPlabicGraph(&p_state.plabic_graph);
         drawPostnikovQuiver(&p_state.postnikov_quiver);
         p_state.plabic_graph.setLocationBasedOnPostnikovQuiver(p_state.postnikov_quiver);
-        if (num2 > 160 and splines == null) {
-            splines = try p_state.plabic_graph.getPostnikovDiagramSplines(p_state.postnikov_quiver);
-        }
-        if (splines) |spls| {
+        if (p_state.strands) |spls| {
             for (spls.items, 0..) |spl, i| {
                 drawSpline(spl);
                 for (0..spl.points.items.len - 3) |j| {
