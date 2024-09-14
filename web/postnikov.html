@@ -18,6 +18,14 @@
         <div> <input type="checkbox" checked autocomplete="off" onChange="setShowQuiver(this)"> Show Quiver</div>
         <div> <input type="checkbox" checked autocomplete="off" onChange="setShowStrands(this)"> Show Strands</div>
     </div>
+    <div class="container">
+        <div>
+            Constuct from standard seed 
+        </div>
+        k <input type="text" checked id="ufss_k" autocomplete="off">
+        n <input type="text" checked id="ufss_n" autocomplete="off">
+        <button onClick="updateFromStandardSeed()">update</button>
+    </div>
     <script type='text/javascript'>
 
       var Module = {
@@ -61,6 +69,16 @@
 
         function setShowStrands(b){
             z_setShowStrands(b.checked);
+        }
+
+        function updateFromStandardSeed(){
+            var n_val = document.getElementById('ufss_n').value;
+            var k_val = document.getElementById('ufss_k').value;
+             
+            var n = parseInt(n_val, 10)
+            var k = parseInt(k_val, 10)
+
+            z_updateFromStandardSeed(k,n);
         }
     </script>
   </body>

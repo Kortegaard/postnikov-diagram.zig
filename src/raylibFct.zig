@@ -48,7 +48,7 @@ const MState = struct {
 
     pub fn update(self: *@This()) !void {
         if (!self.spring_done) {
-            const force = try p_state.postnikov_quiver.apply_spring_step(0.1, 0.4, 0.4, 50);
+            const force = try p_state.postnikov_quiver.apply_spring_step(0.1, 0.4, 0.4, 10);
             if (force < 0.01 or self.frame_since_spring_start >= 2000) {
                 self.spring_done = true;
             }
@@ -320,4 +320,20 @@ pub export fn setShowQuiver(val: bool) void {
 
 pub export fn setShowStrands(val: bool) void {
     p_state.show_strands = val;
+}
+
+pub export fn updateFromStandardSeed(k: i32, n: i32) void {
+    std.debug.print("INFO: inhere, {d}, {d}\n", .{ k, n });
+    const a = LabelCollection.initWithDefaultSeed(alloc, @intCast(k), @intCast(n)) catch {
+        std.debug.print("Error: Problems constructing label collection\n", .{});
+        return;
+    };
+    std.debug.print("INFO: inhere", .{});
+    p_state.reset();
+    std.debug.print("INFO: inhere", .{});
+    p_state.setLabelCollection(a) catch {
+        std.debug.print("Error: Problems constructing label collection\n", .{});
+        return;
+    };
+    std.debug.print("INFO: inhere", .{});
 }

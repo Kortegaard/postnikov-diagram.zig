@@ -29,7 +29,7 @@ pub fn main() !void {
 
     const allocator = getAllocator();
 
-    var a = try LabelCollection.initWithDefaultSeed(allocator, 5, 10);
+    var a = try LabelCollection.initWithDefaultSeed(allocator, 4, 12);
     //var a = LabelCollection.init(allocator, 5, 10);
     defer a.deinit();
     //try a.addLabel(&[_]i32{ 1, 2, 3, 4, 6 });
