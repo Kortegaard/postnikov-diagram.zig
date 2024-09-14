@@ -18,6 +18,41 @@ pub fn init(allocator: Allocator, k: usize, n: usize) Self {
     };
 }
 
+pub fn initWithDefaultSeed(allocator: Allocator, k: usize, n: usize) !Self {
+    var lc = Self.init(allocator, k, n);
+
+    var label = try allocator.alloc(i32, k);
+    defer allocator.free(label);
+    for (1..n + 1 - k + 1) |m| {
+        for (0..k + 1) |l| {
+            var ind: usize = 0;
+            for (1..l + 1) |v| {
+                label[ind] = @intCast(v);
+                ind += 1;
+            }
+            for (l + m..k + m) |v| {
+                label[ind] = @intCast(v);
+                ind += 1;
+            }
+            // TODO: get rid of this check by eliminating overlapping labels above
+            if (!try lc.containsLabel(label)) {
+                try lc.addLabel(label);
+            }
+        }
+    }
+
+    //for (1..n + 1) |i| {
+    //    for (0..k) |j| {
+    //        label[j] = @intCast(@mod(i + j, n));
+    //        if (label[j] == 0) {
+    //            label[j] = @intCast(n);
+    //        }
+    //    }
+    //    try lc.addLabel(label);
+    //}
+    return lc;
+}
+
 pub fn deinit(self: Self) void {
     for (self.collection.items) |label| {
         self.allocator.free(label);
