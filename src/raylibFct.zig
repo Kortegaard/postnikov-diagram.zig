@@ -44,10 +44,11 @@ const MState = struct {
 
     pub fn update(self: *@This()) !void {
         if (!self.spring_done) {
-            try p_state.postnikov_quiver.apply_spring_step(0.1, 0.4, 0.4, 50);
-        }
-        if (self.frame_since_spring_start == 120) {
-            self.spring_done = true;
+            std.debug.print("update spring\n", .{});
+            const force = try p_state.postnikov_quiver.apply_spring_step(0.1, 0.4, 0.4, 50);
+            if (force < 0.01 or self.frame_since_spring_start >= 2000) {
+                self.spring_done = true;
+            }
         }
         if (self.frame_since_spring_start < 2000) {
             self.frame_since_spring_start += 1;

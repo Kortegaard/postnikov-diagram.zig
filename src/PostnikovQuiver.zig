@@ -135,15 +135,20 @@ pub const PostnikovQuiver = struct {
         return Force;
     }
 
-    pub fn apply_spring_step(self: *Self, delta: f32, c0: f32, c1: f32, l: f32) !void {
+    pub fn apply_spring_step(self: *Self, delta: f32, c0: f32, c1: f32, l: f32) !f32 {
         _ = .{ self, delta, c0, c1 };
         var map = hashing.SliceHashMap(i32, Pos2).init(self.allocator);
         defer map.deinit();
+        var total: f32 = 0;
+        var num: usize = 0;
         var vert_it = self.quiver.vertexIterator();
         while (vert_it.next()) |v| {
             if (self.vertex_info.get(v)) |info| {
                 if (!info.frozen) {
-                    try map.put(v, self.spring_F(v, c0, c1, l));
+                    const sp_f = self.spring_F(v, c0, c1, l);
+                    try map.put(v, sp_f);
+                    num += 1;
+                    total += sp_f.norm();
                 }
             }
         }
@@ -156,5 +161,6 @@ pub const PostnikovQuiver = struct {
                 }
             }
         }
+        return total / @as(f32, @floatFromInt(num));
     }
 };
