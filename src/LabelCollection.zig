@@ -161,6 +161,7 @@ pub fn mutateInLabel(self: *Self, label: []const i32) ![]i32 {
         }
     }
 
+    std.mem.sort(i32, label_slice[0..self.k], {}, comptime std.sort.asc(i32));
     return label_slice;
 }
 pub fn mutateInLabel2(self: *Self, label: []const i32) ![]i32 {
