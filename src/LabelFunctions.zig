@@ -168,8 +168,7 @@ test isProjectiveAssumeSorted {
     try std.testing.expectEqual(isProjectiveAssumeSorted(&[_]i32{ 1, 6, 7, 8, 9 }, 10), false);
 }
 
-// Best case (no overlaps) : O(|c1| + |c2|)
-// worst case (Total overlap) : O(n^2)
+// TODO: find faster algoritm
 pub fn isNonCrossing(c1: []const i32, c2: []const i32) bool {
     if (c1.len <= 1 or c2.len <= 1) return true;
 
@@ -183,9 +182,12 @@ pub fn isNonCrossing(c1: []const i32, c2: []const i32) bool {
         closest_clockwise = null;
         closest_anticlockwise = null;
 
-        for (c1) |c1_el| {
+        for_loop: for (c1) |c1_el| {
             if (c1_el == c2[i]) continue :while_loop;
 
+            for (c2) |c2_el| {
+                if (c1_el == c2_el) continue :for_loop;
+            }
             if (closest_clockwise == null or isCyclicOrdered(c2[i], c1_el, closest_clockwise.?)) {
                 closest_clockwise = c1_el;
             }
@@ -195,6 +197,9 @@ pub fn isNonCrossing(c1: []const i32, c2: []const i32) bool {
         }
         break;
     }
+    if (closest_clockwise == closest_anticlockwise) return true;
+
+    std.debug.print("{?}, {?}\n", .{ closest_anticlockwise, closest_clockwise });
 
     // It should theoretically be imposible for these to be null
     // Thus if they are not, the implementation above is wrong.
@@ -226,6 +231,8 @@ test "is non crossing" {
     //Overlapping
     try std.testing.expectEqual(isNonCrossing(&[_]i32{ 1, 3, 4 }, &[_]i32{ 5, 3, 7 }), true);
     try std.testing.expectEqual(isNonCrossing(&[_]i32{ 1, 3, 5 }, &[_]i32{ 4, 1, 7 }), false);
+
+    try std.testing.expectEqual(isNonCrossing(&[_]i32{ 1, 2, 3, 5 }, &[_]i32{ 1, 4, 5, 7 }), true);
 
     // Different size
     try std.testing.expectEqual(isNonCrossing(&[_]i32{ 3, 14 }, &[_]i32{ 1, 2, 5, 7, 9 }), false);
