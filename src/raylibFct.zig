@@ -14,6 +14,7 @@ var alloc: Allocator = std.heap.c_allocator;
 
 const MState = struct {
     plabic_graph: PostnikovPlabicGraph,
+    label_collection: LabelCollection,
     // Clique color
     white_clique_color: rl.Color = rl.Color.light_gray,
     black_clique_color: rl.Color = rl.Color.black,
@@ -75,8 +76,10 @@ const MState = struct {
     }
 
     pub fn setLabelCollection(self: *@This(), lc: LabelCollection) !void {
+        std.debug.print("is non cross: {any}\n", .{lc.isNonCrossing()});
         self.postnikov_quiver = try PostnikovQuiver.initFromLabelCollection(alloc, lc, .{ .center_x = 200, .center_y = 200, .radius = 190 });
         self.plabic_graph = try PostnikovPlabicGraph.initFromLabelCollection(alloc, lc, .{});
+        self.label_collection = lc;
         self.runSpring();
     }
 
@@ -88,11 +91,15 @@ const MState = struct {
 
 var p_state: MState = undefined;
 
-pub fn init(allocator: Allocator, p_quiver: PostnikovQuiver, plabic: PostnikovPlabicGraph) void {
+//pub fn init(allocator: Allocator, p_quiver: PostnikovQuiver, plabic: PostnikovPlabicGraph) void {
+pub fn init(allocator: Allocator, label_collection: LabelCollection) !void {
+    const p_quiver = try PostnikovQuiver.initFromLabelCollection(allocator, label_collection, .{ .center_x = 200, .center_y = 200, .radius = 190 });
+    const plabic = try PostnikovPlabicGraph.initFromLabelCollection(allocator, label_collection, .{});
     alloc = allocator;
     p_state = .{
         .plabic_graph = plabic,
         .postnikov_quiver = p_quiver,
+        .label_collection = label_collection,
     };
 }
 
@@ -109,7 +116,6 @@ pub fn loadNewLabelCollection(label_collection: LabelCollection) void {
     };
     std.debug.print("INFO: Changin over\n", .{});
 }
-
 pub fn raylibShowPostnikovQuiver() !void {
     const screenWidth = 400;
     const screenHeight = 400;
@@ -139,7 +145,29 @@ pub fn raylibShowPostnikovQuiver() !void {
             while (vert_it.next()) |v| {
                 if (p_state.postnikov_quiver.vertex_info.get(v)) |inf| {
                     if (rl.checkCollisionPointCircle(rl.getMousePosition(), rl.Vector2{ .x = inf.pos.x, .y = inf.pos.y }, 8)) {
-                        std.debug.print("{any}\n", .{v});
+                        std.debug.print("mutating at: {any}\n", .{v});
+
+                        const aa = p_state.label_collection.mutateInLabel(v) catch {
+                            std.debug.print("Something went wrong\n", .{});
+                            continue;
+                        };
+                        std.debug.print("is non crossing {any}, {any}\n", .{ p_state.label_collection.isNonCrossing(), p_state.label_collection.isMaximalNonCrossing() });
+                        //p_state.label_collection.prettyPrint();
+                        std.debug.print("new at: {any}\n", .{aa});
+                        //p_state.label_collection.prettyPrint();
+
+                        p_state.runSpring();
+                        p_state.strands.?.deinit();
+                        p_state.strands = null;
+                        p_state.strands_constructed = false;
+                        p_state.postnikov_quiver = PostnikovQuiver.initFromLabelCollection(alloc, p_state.label_collection, .{ .center_x = 200, .center_y = 200, .radius = 190 }) catch {
+                            std.debug.print("Something went wrong2\n", .{});
+                            continue;
+                        };
+                        p_state.plabic_graph = PostnikovPlabicGraph.initFromLabelCollection(alloc, p_state.label_collection, .{}) catch {
+                            std.debug.print("Something went wrong3\n", .{});
+                            continue;
+                        };
                     }
                 }
             }

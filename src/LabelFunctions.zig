@@ -75,12 +75,19 @@ test "fct: isLessThanAlphabetically" {
     try std.testing.expectEqual(isLessThanAlphabetically(&[_]i32{ 1, 2, 3 }, &[_]i32{ 1, 2 }), false);
 }
 
-fn isEqual(T: type, n1: T, n2: T) bool {
+pub fn isEqual(T: type, n1: T, n2: T) bool {
     return switch (@typeInfo(T)) {
         .Array => |e| std.mem.eql(e.child, &n1, &n2),
         .Pointer => |e| std.mem.eql(e.child, n1, n2),
         else => n1 == n2,
     };
+}
+
+pub fn inSlice(comptime T: type, haystack: []const T, needle: T) bool {
+    for (haystack) |v| {
+        if (isEqual(T, v, needle)) return true;
+    }
+    return false;
 }
 
 pub fn isSubsetAssumeSorted(comptime T: type, subset: []const T, set: []const T) bool {
@@ -199,8 +206,6 @@ pub fn isNonCrossing(c1: []const i32, c2: []const i32) bool {
     }
     if (closest_clockwise == closest_anticlockwise) return true;
 
-    std.debug.print("{?}, {?}\n", .{ closest_anticlockwise, closest_clockwise });
-
     // It should theoretically be imposible for these to be null
     // Thus if they are not, the implementation above is wrong.
     std.debug.assert(closest_anticlockwise != null);
@@ -230,6 +235,7 @@ test "is non crossing" {
 
     //Overlapping
     try std.testing.expectEqual(isNonCrossing(&[_]i32{ 1, 3, 4 }, &[_]i32{ 5, 3, 7 }), true);
+    try std.testing.expectEqual(isNonCrossing(&[_]i32{ 1, 2, 3, 5 }, &[_]i32{ 1, 4, 5, 7 }), true);
     try std.testing.expectEqual(isNonCrossing(&[_]i32{ 1, 3, 5 }, &[_]i32{ 4, 1, 7 }), false);
 
     try std.testing.expectEqual(isNonCrossing(&[_]i32{ 1, 2, 3, 5 }, &[_]i32{ 1, 4, 5, 7 }), true);
@@ -313,7 +319,7 @@ pub fn modPlusOne(k: i32, n: i32) i32 {
     return tmp;
 }
 
-pub fn intersection(allocator: std.mem.Allocator, comptime T: type, sl1: []T, sl2: []T) !std.ArrayList(T) {
+pub fn intersection(allocator: std.mem.Allocator, comptime T: type, sl1: []const T, sl2: []const T) !std.ArrayList(T) {
     var m_list = std.ArrayList(T).init(allocator);
     for (sl1) |b1| {
         for (sl2) |b2| {
@@ -321,6 +327,17 @@ pub fn intersection(allocator: std.mem.Allocator, comptime T: type, sl1: []T, sl
         }
     }
     return m_list;
+}
+
+// assumes no doublicated elements
+pub fn intersectionSize(comptime T: type, sl1: []const T, sl2: []const T) usize {
+    var count: usize = 0;
+    for (sl1) |b1| {
+        for (sl2) |b2| {
+            if (isEqual(T, b1, b2)) count += 1;
+        }
+    }
+    return count;
 }
 
 pub fn boundaryIntersectionSize(comptime T: type, sl1: []T, sl2: []T) usize {

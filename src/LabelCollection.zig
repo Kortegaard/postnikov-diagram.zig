@@ -2,6 +2,11 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const LabelFct = @import("LabelFunctions.zig");
 
+const LabelCollectionError = error{
+    SliceNotFound,
+    CannotMutate,
+};
+
 const Self = @This();
 
 k: usize = 0,
@@ -73,6 +78,144 @@ pub fn addLabel(self: *Self, label: []const i32) !void {
     try self.collection.append(new_label);
 }
 
+pub fn mutateInLabel(self: *Self, label: []const i32) ![]i32 {
+    const label_slice = try self.getLabelSlice(label) orelse return LabelCollectionError.SliceNotFound;
+
+    var bcs = try self.getBlackCliquesSorted();
+    var wcs = try self.getWhiteCliquesSorted();
+    defer {
+        for (bcs.items) |i| {
+            i.deinit();
+        }
+        bcs.deinit();
+    }
+    defer {
+        for (wcs.items) |i| {
+            i.deinit();
+        }
+        wcs.deinit();
+    }
+
+    // remove cliques not containing label
+    var i = wcs.items.len - 1; // TODO : problem is length is 0
+    while (i > 0) {
+        i -= 1;
+        std.debug.print("{d}\n", .{i});
+        if (!LabelFct.inSlice([]const i32, wcs.items[i].items, label)) {
+            wcs.items[i].deinit();
+            _ = wcs.swapRemove(i);
+        }
+    }
+
+    i = bcs.items.len - 1; // TODO : problem is length is 0
+    while (i > 0) {
+        i -= 1;
+        if (!LabelFct.inSlice([]const i32, bcs.items[i].items, label)) {
+            bcs.items[i].deinit();
+            _ = bcs.swapRemove(i);
+        }
+    }
+    const it = LabelFct.boundaryOfSliceIterator([]const i32);
+
+    var adj_labels = std.ArrayList([]const i32).init(self.allocator);
+    defer adj_labels.deinit();
+
+    for (bcs.items) |bc| {
+        var bit = it.init(bc.items);
+        while (bit.next()) |bound| {
+            if (LabelFct.isEqual([]const i32, label, bound[0])) {
+                try adj_labels.append(bound[1]);
+            }
+            if (LabelFct.isEqual([]const i32, label, bound[1])) {
+                try adj_labels.append(bound[0]);
+            }
+        }
+    }
+    if (adj_labels.items.len != 4) return label_slice; //return eroro TODO:
+
+    var new: [2]i32 = [_]i32{ -1, -1 };
+
+    for (adj_labels.items) |adj_lab| {
+        for (adj_lab) |num| {
+            if (!LabelFct.inSlice(i32, label, num)) {
+                var ind: usize = 0;
+                if (new[0] != -1) {
+                    ind = 1;
+                }
+                new[ind] = num;
+            }
+        }
+    }
+    std.debug.assert(new[1] != -1);
+
+    //const label_slice = try self.getLabelSlice(label) orelse return LabelCollectionError.SliceNotFound;
+    var m: usize = 0;
+    out: for (label_slice, 0..) |num, k| {
+        for (adj_labels.items) |adj_lab| {
+            if (!LabelFct.inSlice(i32, adj_lab, num)) {
+                std.debug.assert(m <= 1);
+                label_slice[k] = new[m];
+                m += 1;
+                continue :out;
+            }
+        }
+    }
+
+    return label_slice;
+}
+pub fn mutateInLabel2(self: *Self, label: []const i32) ![]i32 {
+    std.debug.print("1\n", .{});
+    var label_slice = try self.getLabelSlice(label) orelse return LabelCollectionError.SliceNotFound;
+    std.debug.print("2\n", .{});
+
+    var _union = std.ArrayList(i32).init(self.allocator);
+    defer _union.deinit();
+    var intersection = std.ArrayList(i32).init(self.allocator);
+    defer intersection.deinit();
+
+    var count: usize = 0;
+
+    std.debug.print("3\n", .{});
+    for (self.collection.items) |lab| {
+        if (LabelFct.intersectionSize(i32, lab, label) == self.k - 1) {
+            std.debug.print("item {any}\n", .{lab});
+            count += 1;
+            for (lab) |n| {
+                if (!LabelFct.inSlice(i32, _union.items, n)) try _union.append(n);
+                const inlen = intersection.items.len;
+                for (0..inlen) |i| {
+                    if (intersection.items[inlen - 1 - i] == n) {
+                        _ = intersection.orderedRemove(inlen - 1 - i);
+                    }
+                }
+            }
+        }
+    }
+    std.debug.print("count {d}\n", .{count});
+    //if (count != 4) {
+    //    return LabelCollectionError.CannotMutate;
+    //}
+    std.debug.print("5\n", .{});
+    // calculate union\label, putting result in union
+    const unlen = _union.items.len;
+    for (0..unlen) |i| {
+        if (LabelFct.inSlice(i32, label, _union.items[unlen - 1 - i])) {
+            _ = _union.orderedRemove(unlen - 1 - i);
+        }
+    }
+
+    std.debug.print("6\n", .{});
+    for (intersection.items) |v| {
+        try _union.append(v);
+    }
+    // Now union is the new label
+
+    std.mem.copyForwards(i32, label_slice, _union.items);
+    std.mem.sort(i32, label_slice[0..self.k], {}, comptime std.sort.asc(i32));
+
+    return label_slice;
+}
+
 pub fn print(self: Self) void {
     std.debug.print("LabelCollection({d},{d}){{", .{ self.k, self.n });
     for (self.collection.items, 0..) |it, i| {
@@ -101,8 +244,10 @@ pub fn prettyPrint(self: Self) void {
 pub fn isNonCrossing(self: Self) bool {
     for (0..self.collection.items.len) |i| {
         for (i + 1..self.collection.items.len) |j| {
-            if (!LabelFct.isNonCrossing(&self.collection.items[i], &self.collection.items[j]))
+            if (!LabelFct.isNonCrossing(self.collection.items[i], self.collection.items[j])) {
+                std.debug.print("{any}  {any},\n", .{ self.collection.items[i], self.collection.items[j] });
                 return false;
+            }
         }
     }
     return true;
@@ -126,7 +271,7 @@ pub fn getProjectivePtrStartingAt(self: Self, point: i32) !?[]const i32 {
 
 // TODO: Test
 pub fn isMaximalNonCrossing(self: Self) bool {
-    return self.collection.len == self.k * (self.n - self.k) + 1 and self.isNonCrossing();
+    return self.collection.items.len == self.k * (self.n - self.k) + 1 and self.isNonCrossing();
 }
 
 // TODO: Test
@@ -158,6 +303,29 @@ pub fn containsSortedLabel(self: Self, label: []i32) bool {
         return true;
     }
     return false;
+}
+
+pub fn getLabelSliceSorted(self: Self, label: []const i32) ?[]i32 {
+    // Creating a sorted version of label
+
+    outer_loop: for (self.collection.items) |l| {
+        for (label, 0..) |num, index| {
+            if (num != l[index]) continue :outer_loop;
+        }
+        return l;
+    }
+    return null;
+}
+
+pub fn getLabelSlice(self: Self, label: []const i32) !?[]i32 {
+    if (label.len != self.k) return null;
+
+    var label_copy = try self.allocator.alloc(i32, self.k);
+    defer self.allocator.free(label_copy);
+    @memcpy(label_copy[0..self.k], label[0..self.k]);
+    std.mem.sort(i32, label_copy[0..self.k], {}, comptime std.sort.asc(i32));
+
+    return self.getLabelSliceSorted(label_copy);
 }
 
 pub fn sort(self: *Self) void {
