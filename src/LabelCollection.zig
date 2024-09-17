@@ -46,15 +46,6 @@ pub fn initWithDefaultSeed(allocator: Allocator, k: usize, n: usize) !Self {
         }
     }
 
-    //for (1..n + 1) |i| {
-    //    for (0..k) |j| {
-    //        label[j] = @intCast(@mod(i + j, n));
-    //        if (label[j] == 0) {
-    //            label[j] = @intCast(n);
-    //        }
-    //    }
-    //    try lc.addLabel(label);
-    //}
     return lc;
 }
 
