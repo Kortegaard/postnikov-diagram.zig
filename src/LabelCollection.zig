@@ -164,58 +164,6 @@ pub fn mutateInLabel(self: *Self, label: []const i32) !?[]i32 {
     std.mem.sort(i32, label_slice[0..self.k], {}, comptime std.sort.asc(i32));
     return label_slice;
 }
-pub fn mutateInLabel2(self: *Self, label: []const i32) ![]i32 {
-    std.debug.print("1\n", .{});
-    var label_slice = try self.getLabelSlice(label) orelse return LabelCollectionError.SliceNotFound;
-    std.debug.print("2\n", .{});
-
-    var _union = std.ArrayList(i32).init(self.allocator);
-    defer _union.deinit();
-    var intersection = std.ArrayList(i32).init(self.allocator);
-    defer intersection.deinit();
-
-    var count: usize = 0;
-
-    std.debug.print("3\n", .{});
-    for (self.collection.items) |lab| {
-        if (LabelFct.intersectionSize(i32, lab, label) == self.k - 1) {
-            std.debug.print("item {any}\n", .{lab});
-            count += 1;
-            for (lab) |n| {
-                if (!LabelFct.inSlice(i32, _union.items, n)) try _union.append(n);
-                const inlen = intersection.items.len;
-                for (0..inlen) |i| {
-                    if (intersection.items[inlen - 1 - i] == n) {
-                        _ = intersection.orderedRemove(inlen - 1 - i);
-                    }
-                }
-            }
-        }
-    }
-    std.debug.print("count {d}\n", .{count});
-    //if (count != 4) {
-    //    return LabelCollectionError.CannotMutate;
-    //}
-    std.debug.print("5\n", .{});
-    // calculate union\label, putting result in union
-    const unlen = _union.items.len;
-    for (0..unlen) |i| {
-        if (LabelFct.inSlice(i32, label, _union.items[unlen - 1 - i])) {
-            _ = _union.orderedRemove(unlen - 1 - i);
-        }
-    }
-
-    std.debug.print("6\n", .{});
-    for (intersection.items) |v| {
-        try _union.append(v);
-    }
-    // Now union is the new label
-
-    std.mem.copyForwards(i32, label_slice, _union.items);
-    std.mem.sort(i32, label_slice[0..self.k], {}, comptime std.sort.asc(i32));
-
-    return label_slice;
-}
 
 pub fn print(self: Self) void {
     std.debug.print("LabelCollection({d},{d}){{", .{ self.k, self.n });
