@@ -30,9 +30,53 @@ pub fn main() !void {
     const allocator = getAllocator();
 
     var a = try LabelCollection.initWithDefaultSeed(allocator, 4, 8);
+    //var a = LabelCollection.init(allocator, 4, 8);
     defer a.deinit();
+    //try a.addLabel(&[_]i32{ 1, 2, 3, 4 });
+    //try a.addLabel(&[_]i32{ 2, 3, 4, 5 });
+    //try a.addLabel(&[_]i32{ 3, 4, 5, 6 });
+    //try a.addLabel(&[_]i32{ 4, 5, 6, 7 });
+    //try a.addLabel(&[_]i32{ 5, 6, 7, 8 });
+    //try a.addLabel(&[_]i32{ 1, 6, 7, 8 });
+    //try a.addLabel(&[_]i32{ 1, 2, 7, 8 });
+    //try a.addLabel(&[_]i32{ 1, 2, 3, 8 });
 
-    //std.debug.print("{any}, {any}\n", .{ a.isNonCrossing(), a.isMaximalNonCrossing() });
+    //try a.addLabel(&[_]i32{ 2, 6, 4, 5 });
+    //try a.addLabel(&[_]i32{ 1, 2, 4, 5 });
+    //try a.addLabel(&[_]i32{ 1, 2, 4, 6 });
+    //try a.addLabel(&[_]i32{ 1, 4, 5, 6 });
+    //try a.addLabel(&[_]i32{ 1, 2, 5, 6 });
+    //try a.addLabel(&[_]i32{ 1, 2, 3, 6 });
+    //try a.addLabel(&[_]i32{ 1, 5, 6, 7 });
+    //try a.addLabel(&[_]i32{ 1, 2, 6, 7 });
+    //try a.addLabel(&[_]i32{ 1, 2, 3, 7 });
+
+    //try a.addLabel(&[_]i32{ 1, 2, 3, 4 });
+    //try a.addLabel(&[_]i32{ 2, 3, 4, 5 });
+    //try a.addLabel(&[_]i32{ 2, 6, 4, 5 });
+    //try a.addLabel(&[_]i32{ 1, 2, 4, 5 });
+    //try a.addLabel(&[_]i32{ 1, 2, 4, 6 });
+    //try a.addLabel(&[_]i32{ 3, 4, 5, 6 });
+    //try a.addLabel(&[_]i32{ 1, 4, 5, 6 });
+    //try a.addLabel(&[_]i32{ 1, 2, 5, 6 });
+    //try a.addLabel(&[_]i32{ 1, 2, 3, 6 });
+    //try a.addLabel(&[_]i32{ 4, 5, 6, 7 });
+    //try a.addLabel(&[_]i32{ 1, 5, 6, 7 });
+    //try a.addLabel(&[_]i32{ 1, 2, 6, 7 });
+    //try a.addLabel(&[_]i32{ 1, 2, 3, 7 });
+    //try a.addLabel(&[_]i32{ 5, 6, 7, 8 });
+    //try a.addLabel(&[_]i32{ 1, 6, 7, 8 });
+    //try a.addLabel(&[_]i32{ 1, 2, 7, 8 });
+    //try a.addLabel(&[_]i32{ 1, 2, 3, 8 });
+
+    //try a.addLabel(&[_]i32{ 5, 6, 7, 8, 9 });
+
+    //try a.addLabel(&[_]i32{ 6, 7, 8, 9, 10 });
+    //try a.addLabel(&[_]i32{ 1, 7, 8, 9, 10 });
+    //try a.addLabel(&[_]i32{ 1, 2, 8, 9, 10 });
+    //try a.addLabel(&[_]i32{ 1, 2, 3, 9, 10 });
+    //try a.addLabel(&[_]i32{ 1, 2, 3, 4, 10 });
+
     try r.init(allocator, a);
     try r.raylibShowPostnikovQuiver();
 }

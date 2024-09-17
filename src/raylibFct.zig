@@ -73,6 +73,7 @@ const MState = struct {
         }
         self.strands = null;
         self.strands_constructed = false;
+        self.runSpring();
     }
 
     pub fn setLabelCollection(self: *@This(), lc: LabelCollection) !void {
@@ -146,20 +147,16 @@ pub fn raylibShowPostnikovQuiver() !void {
                 if (p_state.postnikov_quiver.vertex_info.get(v)) |inf| {
                     if (rl.checkCollisionPointCircle(rl.getMousePosition(), rl.Vector2{ .x = inf.pos.x, .y = inf.pos.y }, 8)) {
                         std.debug.print("mutating at: {any}\n", .{v});
-
+                        p_state.reset();
                         const aa = p_state.label_collection.mutateInLabel(v) catch {
                             std.debug.print("Something went wrong\n", .{});
                             continue;
                         };
                         std.debug.print("is non crossing {any}, {any}\n", .{ p_state.label_collection.isNonCrossing(), p_state.label_collection.isMaximalNonCrossing() });
-                        //p_state.label_collection.prettyPrint();
+                        p_state.label_collection.prettyPrint();
                         std.debug.print("new at: {any}\n", .{aa});
                         //p_state.label_collection.prettyPrint();
 
-                        p_state.runSpring();
-                        p_state.strands.?.deinit();
-                        p_state.strands = null;
-                        p_state.strands_constructed = false;
                         p_state.postnikov_quiver = PostnikovQuiver.initFromLabelCollection(alloc, p_state.label_collection, .{ .center_x = 200, .center_y = 200, .radius = 190 }) catch {
                             std.debug.print("Something went wrong2\n", .{});
                             continue;
