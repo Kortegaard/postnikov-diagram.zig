@@ -49,7 +49,7 @@ const MState = struct {
 
     pub fn update(self: *@This()) !void {
         if (!self.spring_done) {
-            const force = try p_state.postnikov_quiver.apply_spring_step(0.1, 0.4, 0.4, 50);
+            const force = try p_state.postnikov_quiver.apply_spring_step(0.1, 0.4, 0.4, 20);
             if (force < 0.01 or self.frame_since_spring_start >= 2000) {
                 self.spring_done = true;
             }
@@ -117,6 +117,7 @@ pub fn loadNewLabelCollection(label_collection: LabelCollection) void {
     };
     std.debug.print("INFO: Changin over\n", .{});
 }
+
 pub fn raylibShowPostnikovQuiver() !void {
     const screenWidth = 400;
     const screenHeight = 400;
@@ -144,6 +145,7 @@ pub fn raylibShowPostnikovQuiver() !void {
             isPressed = false;
             var vert_it = p_state.postnikov_quiver.quiver.vertexIterator();
             while (vert_it.next()) |v| {
+                std.debug.print("n2  {any}\n", .{v});
                 if (p_state.postnikov_quiver.vertex_info.get(v)) |inf| {
                     if (rl.checkCollisionPointCircle(rl.getMousePosition(), rl.Vector2{ .x = inf.pos.x, .y = inf.pos.y }, 8)) {
                         std.debug.print("mutating at: {any}\n", .{v});
@@ -153,9 +155,7 @@ pub fn raylibShowPostnikovQuiver() !void {
                             continue;
                         };
                         std.debug.print("is non crossing {any}, {any}\n", .{ p_state.label_collection.isNonCrossing(), p_state.label_collection.isMaximalNonCrossing() });
-                        p_state.label_collection.prettyPrint();
                         std.debug.print("new at: {any}\n", .{aa});
-                        //p_state.label_collection.prettyPrint();
 
                         p_state.postnikov_quiver = PostnikovQuiver.initFromLabelCollection(alloc, p_state.label_collection, .{ .center_x = 200, .center_y = 200, .radius = 190 }) catch {
                             std.debug.print("Something went wrong2\n", .{});
@@ -165,6 +165,7 @@ pub fn raylibShowPostnikovQuiver() !void {
                             std.debug.print("Something went wrong3\n", .{});
                             continue;
                         };
+                        break;
                     }
                 }
             }
