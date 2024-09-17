@@ -149,11 +149,12 @@ pub fn raylibShowPostnikovQuiver() !void {
                 if (p_state.postnikov_quiver.vertex_info.get(v)) |inf| {
                     if (rl.checkCollisionPointCircle(rl.getMousePosition(), rl.Vector2{ .x = inf.pos.x, .y = inf.pos.y }, 8)) {
                         std.debug.print("mutating at: {any}\n", .{v});
-                        p_state.reset();
                         const aa = p_state.label_collection.mutateInLabel(v) catch {
                             std.debug.print("Something went wrong\n", .{});
                             continue;
                         };
+                        if(aa == null) continue;
+                        p_state.reset();
                         std.debug.print("is non crossing {any}, {any}\n", .{ p_state.label_collection.isNonCrossing(), p_state.label_collection.isMaximalNonCrossing() });
                         std.debug.print("new at: {any}\n", .{aa});
 
