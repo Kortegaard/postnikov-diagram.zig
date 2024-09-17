@@ -159,11 +159,11 @@ pub fn raylibShowPostnikovQuiver() !void {
 
                         p_state.postnikov_quiver = PostnikovQuiver.initFromLabelCollection(alloc, p_state.label_collection, .{ .center_x = 200, .center_y = 200, .radius = 190 }) catch {
                             std.debug.print("Something went wrong2\n", .{});
-                            continue;
+                            break;
                         };
                         p_state.plabic_graph = PostnikovPlabicGraph.initFromLabelCollection(alloc, p_state.label_collection, .{}) catch {
                             std.debug.print("Something went wrong3\n", .{});
-                            continue;
+                            break;
                         };
                         break;
                     }

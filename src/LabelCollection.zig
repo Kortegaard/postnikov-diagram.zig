@@ -78,7 +78,7 @@ pub fn addLabel(self: *Self, label: []const i32) !void {
     try self.collection.append(new_label);
 }
 
-pub fn mutateInLabel(self: *Self, label: []const i32) ![]i32 {
+pub fn mutateInLabel(self: *Self, label: []const i32) !?[]i32 {
     const label_slice = try self.getLabelSlice(label) orelse return LabelCollectionError.SliceNotFound;
 
     var bcs = try self.getBlackCliquesSorted();
@@ -131,7 +131,7 @@ pub fn mutateInLabel(self: *Self, label: []const i32) ![]i32 {
             }
         }
     }
-    if (adj_labels.items.len != 4) return label_slice; //return eroro TODO:
+    if (adj_labels.items.len != 4) return null; //return eroro TODO:
 
     var new: [2]i32 = [_]i32{ -1, -1 };
 
