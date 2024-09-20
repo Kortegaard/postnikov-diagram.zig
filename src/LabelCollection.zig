@@ -1,6 +1,8 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const LabelFct = @import("LabelFunctions.zig");
+const PostnikovQuiver  = @import("PostnikovQuiver.zig").PostnikovQuiver;
+const PlabicGraph  = @import("PostnikovPlabicGraph.zig").PostnikovPlabicGraph;
 
 const LabelCollectionError = error{
     SliceNotFound,
@@ -13,6 +15,8 @@ k: usize = 0,
 n: usize = 0,
 allocator: Allocator,
 collection: std.ArrayList([]i32),
+postnikov_quiver: ?PostnikovQuiver = null,
+plabic_graph: ?PlabicGraph = null,
 
 pub fn init(allocator: Allocator, k: usize, n: usize) Self {
     return .{
@@ -49,7 +53,10 @@ pub fn initWithDefaultSeed(allocator: Allocator, k: usize, n: usize) !Self {
     return lc;
 }
 
-pub fn deinit(self: Self) void {
+pub fn deinit(self: *Self) void {
+    if(self.postnikov_quiver)|*pq| pq.deinit();
+    if(self.plabic_graph)|*pg| pg.deinit();
+
     for (self.collection.items) |label| {
         self.allocator.free(label);
     }
@@ -413,4 +420,18 @@ test "Label collection - isNonCrossing" {
         try a.addLabel(.{ 14, 8, 1 });
         try std.testing.expectEqual(a.isNonCrossing(), true);
     }
+}
+
+pub fn constructPlabicGraph(self: *Self, conf: PlabicGraph.PostnikovPlabicGraphParams) !void {
+    if(self.plabic_graph)|*q|{
+        q.deinit();
+    }
+    self.plabic_graph = try PlabicGraph.initFromLabelCollection(self.allocator, self.*, conf);
+}
+
+pub fn constructPostnikovQuiver(self: *Self, conf: PostnikovQuiver.PostnikovQuiverParams) !void {
+    if(self.postnikov_quiver)|*q|{
+        q.deinit();
+    }
+    self.postnikov_quiver = try PostnikovQuiver.initFromLabelCollection(self.allocator, self.*, conf);
 }

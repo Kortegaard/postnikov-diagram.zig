@@ -6,6 +6,7 @@ const hashing = @import("hashing.zig");
 const LabelCollection = @import("LabelCollection.zig");
 
 pub const PostnikovQuiver = struct {
+
     pub const PostnikovPlabicGraph = struct {
         plabicGraph: Quiver([]const i32, i32),
     };
@@ -22,10 +23,11 @@ pub const PostnikovQuiver = struct {
     };
 
     const Self = @This();
+    
     allocator: Allocator,
     quiver: Quiver([]const i32, i32),
     vertex_info: hashing.SliceHashMap(i32, PostnikovQuiverVertexInfo),
-    labelCollection: ?LabelCollection = null,
+    //labelCollection: ?LabelCollection = null,
     conf: PostnikovQuiverParams = .{},
 
     pub fn init(allocator: Allocator) Self {
@@ -43,7 +45,7 @@ pub const PostnikovQuiver = struct {
         const rand = prng.random();
 
         var p_quiver = PostnikovQuiver.init(allocator);
-        p_quiver.labelCollection = label_collection;
+        //p_quiver.labelCollection = label_collection;
         p_quiver.conf = conf;
 
         for (label_collection.collection.items) |label| {

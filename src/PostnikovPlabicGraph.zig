@@ -28,7 +28,7 @@ pub const PostnikovPlabicGraph = struct {
     allocator: Allocator,
     quiver: Quiver([]const u8, i32),
     vertex_info: hashing.SliceHashMap(u8, PostnikovPlabicGraphVertexInfo),
-    labelCollection: ?LabelCollection = null,
+    //labelCollection: ?LabelCollection = null,
 
     pub fn init(allocator: Allocator) Self {
         const quiv = Quiver([]const u8, i32).init(allocator);
@@ -53,7 +53,7 @@ pub const PostnikovPlabicGraph = struct {
         _ = .{ rand, conf };
 
         var p_quiver = Self.init(allocator);
-        p_quiver.labelCollection = label_collection;
+        //p_quiver.labelCollection = label_collection;
 
         const white_cliques: std.ArrayList(std.ArrayList([]const i32)) = try label_collection.getWhiteCliquesSorted();
         const black_cliques: std.ArrayList(std.ArrayList([]const i32)) = try label_collection.getBlackCliquesSorted();

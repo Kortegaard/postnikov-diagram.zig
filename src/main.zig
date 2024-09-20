@@ -28,8 +28,7 @@ const r = @import("./raylibFct.zig");
 pub fn main() !void {
     const allocator = getAllocator();
 
-    var a = try LabelCollection.initWithDefaultSeed(allocator, 4, 8);
-    defer a.deinit();
+    const a = try LabelCollection.initWithDefaultSeed(allocator, 4, 8);
 
     try r.init(allocator, a);
     try r.raylibShowPostnikovQuiver();
