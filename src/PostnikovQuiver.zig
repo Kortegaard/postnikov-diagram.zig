@@ -45,9 +45,9 @@ pub const PostnikovQuiver = struct {
         const rand = prng.random();
 
         var p_quiver = PostnikovQuiver.init(allocator);
-        //p_quiver.labelCollection = label_collection;
         p_quiver.conf = conf;
 
+        // adding labels as vertices
         for (label_collection.collection.items) |label| {
             try p_quiver.quiver.addVertex(label);
             const x = rand.float(f32) * conf.radius * std.math.cos(rand.float(f32) * (2 * std.math.pi)) + conf.center_x;
@@ -90,6 +90,23 @@ pub const PostnikovQuiver = struct {
             }
         }
         return p_quiver;
+    }
+
+
+    pub fn getAdjecentLabels(self: Self, label: []const i32) !std.ArrayList([]const i32) {
+        var adj = std.ArrayList([]const i32).init(self.allocator);
+        
+        const a = self.quiver.getArrowsIn(label);
+        for(a)|ar|{
+            try adj.append(ar.from);
+        }
+
+        //const b = self.quiver.getArrowsOut(label);
+        //for(b)|ar|{
+        //    try adj.append(ar.to);
+        //}
+
+        return adj;
     }
 
     pub fn deinit(self: *Self) void {

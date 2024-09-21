@@ -76,36 +76,26 @@ pub fn addLabel(self: *Self, label: []const i32) !void {
     try self.collection.append(new_label);
 }
 
-pub fn mutateInLabel(self: *Self, label: []const i32) !?[]i32 {
-    const label_slice = try self.getLabelSlice(label) orelse return LabelCollectionError.SliceNotFound;
+pub fn getAdjecentLabels(self: Self, label: []const i32) !std.ArrayList([]const i32) {
+    if(self.postnikov_quiver)|pq|{
+        const a = try pq.getAdjecentLabels(label);
+        std.debug.print("labs: {d}",  .{a.items.len});
+        return a;
+    }
+
+    var adj_labels = std.ArrayList([]const i32).init(self.allocator);
 
     var bcs = try self.getBlackCliquesSorted();
-    var wcs = try self.getWhiteCliquesSorted();
     defer {
         for (bcs.items) |i| {
             i.deinit();
         }
         bcs.deinit();
     }
-    defer {
-        for (wcs.items) |i| {
-            i.deinit();
-        }
-        wcs.deinit();
-    }
+
 
     // remove cliques not containing label
-    var i = wcs.items.len - 1; // TODO : problem is length is 0
-    while (i > 0) {
-        i -= 1;
-        std.debug.print("{d}\n", .{i});
-        if (!LabelFct.inSlice([]const i32, wcs.items[i].items, label)) {
-            wcs.items[i].deinit();
-            _ = wcs.swapRemove(i);
-        }
-    }
-
-    i = bcs.items.len - 1; // TODO : problem is length is 0
+    var i = bcs.items.len - 1; // TODO : problem is length is 0
     while (i > 0) {
         i -= 1;
         if (!LabelFct.inSlice([]const i32, bcs.items[i].items, label)) {
@@ -115,9 +105,7 @@ pub fn mutateInLabel(self: *Self, label: []const i32) !?[]i32 {
     }
     const it = LabelFct.boundaryOfSliceIterator([]const i32);
 
-    var adj_labels = std.ArrayList([]const i32).init(self.allocator);
-    defer adj_labels.deinit();
-
+    // adjecent labels are the one that are adjecent in the clique boundary
     for (bcs.items) |bc| {
         var bit = it.init(bc.items);
         while (bit.next()) |bound| {
@@ -129,8 +117,19 @@ pub fn mutateInLabel(self: *Self, label: []const i32) !?[]i32 {
             }
         }
     }
-    if (adj_labels.items.len != 4) return null; //return eroro TODO:
 
+    // The collection is mutable only if there are 4 adjecent labels
+
+    return adj_labels;
+}
+
+pub fn mutateInLabel(self: *Self, label: []const i32) !?[]i32 {
+
+
+    var adj_labels = try self.getAdjecentLabels(label);
+    defer adj_labels.deinit();
+
+    // mutating label
     var new: [2]i32 = [_]i32{ -1, -1 };
 
     for (adj_labels.items) |adj_lab| {
@@ -146,7 +145,8 @@ pub fn mutateInLabel(self: *Self, label: []const i32) !?[]i32 {
     }
     std.debug.assert(new[1] != -1);
 
-    //const label_slice = try self.getLabelSlice(label) orelse return LabelCollectionError.SliceNotFound;
+    const label_slice = try self.getLabelSlice(label) orelse return LabelCollectionError.SliceNotFound;
+
     var m: usize = 0;
     out: for (label_slice, 0..) |num, k| {
         for (adj_labels.items) |adj_lab| {
