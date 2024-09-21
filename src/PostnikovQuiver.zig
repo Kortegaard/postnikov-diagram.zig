@@ -56,7 +56,13 @@ pub const PostnikovQuiver = struct {
         }
 
         var curr_lab: i32 = 0;
+
+        // adding arrows along white clique boundary
         const white_cliques = try label_collection.getWhiteCliquesSorted();
+        defer {
+            for(white_cliques.items)|*c| c.deinit();
+            white_cliques.deinit();
+        }
         for (white_cliques.items) |clique| {
             for (0..clique.items.len) |i| {
                 const next_i = if (i >= clique.items.len - 1) 0 else i + 1;
@@ -65,10 +71,19 @@ pub const PostnikovQuiver = struct {
             }
         }
 
+        // adding arrows along white clique boundary
         const black_cliques = try label_collection.getBlackCliquesSorted();
+        defer {
+            for(black_cliques.items)|*c| c.deinit();
+            black_cliques.deinit();
+        }
         for (black_cliques.items) |clique| {
             for (0..clique.items.len) |i| {
                 const next_i = if (i >= clique.items.len - 1) 0 else i + 1;
+
+                // TODO: can maybe make this check a bit faster 
+                if(p_quiver.quiver.containsArrowBetween(clique.items[i], clique.items[next_i])) continue;
+
                 try p_quiver.quiver.addArrow(clique.items[i], clique.items[next_i], curr_lab);
                 curr_lab += 1;
             }
@@ -101,10 +116,10 @@ pub const PostnikovQuiver = struct {
             try adj.append(ar.from);
         }
 
-        //const b = self.quiver.getArrowsOut(label);
-        //for(b)|ar|{
-        //    try adj.append(ar.to);
-        //}
+        const b = self.quiver.getArrowsOut(label);
+        for(b)|ar|{
+            try adj.append(ar.to);
+        }
 
         return adj;
     }

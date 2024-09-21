@@ -79,7 +79,7 @@ pub fn addLabel(self: *Self, label: []const i32) !void {
 pub fn getAdjecentLabels(self: Self, label: []const i32) !std.ArrayList([]const i32) {
     if(self.postnikov_quiver)|pq|{
         const a = try pq.getAdjecentLabels(label);
-        std.debug.print("labs: {d}",  .{a.items.len});
+        std.debug.print("labs: {d}\n",  .{a.items.len});
         return a;
     }
 
@@ -128,6 +128,11 @@ pub fn mutateInLabel(self: *Self, label: []const i32) !?[]i32 {
 
     var adj_labels = try self.getAdjecentLabels(label);
     defer adj_labels.deinit();
+
+    if(adj_labels.items.len != 4){ 
+        std.debug.print("cannot mutate\n" , .{});
+        return null;
+    }
 
     // mutating label
     var new: [2]i32 = [_]i32{ -1, -1 };
