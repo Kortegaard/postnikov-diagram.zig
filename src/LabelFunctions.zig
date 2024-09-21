@@ -172,6 +172,7 @@ test isProjectiveAssumeSorted {
     try std.testing.expectEqual(isProjectiveAssumeSorted(&[_]i32{ 1, 7, 8, 9, 10 }, 10), true);
     try std.testing.expectEqual(isProjectiveAssumeSorted(&[_]i32{ 2, 3, 4, 6, 7 }, 10), false);
     try std.testing.expectEqual(isProjectiveAssumeSorted(&[_]i32{ 2, 3, 4, 5, 6 }, 10), true);
+    try std.testing.expectEqual(isProjectiveAssumeSorted(&[_]i32{ 2, 3,  5, 6, 7 }, 10), false);
     try std.testing.expectEqual(isProjectiveAssumeSorted(&[_]i32{ 1, 6, 7, 8, 9 }, 10), false);
 }
 
