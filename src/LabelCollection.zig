@@ -163,6 +163,7 @@ pub fn mutateInLabel(self: *Self, label: []const i32) !?[]i32 {
         }
     }
     std.debug.assert(new[1] != -1);
+    if(new[1] != -1) return null;
 
     const label_slice = try self.getLabelSlice(label) orelse return LabelCollectionError.SliceNotFound;
 
