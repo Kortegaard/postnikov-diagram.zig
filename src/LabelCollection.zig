@@ -123,6 +123,20 @@ pub fn getAdjecentLabels(self: Self, label: []const i32) !std.ArrayList([]const 
     return adj_labels;
 }
 
+pub fn isLabelMutableAssumeSorted(self: Self, label: []const i32) !bool {
+    if(self.postnikov_quiver)|pq|{
+        if (pq.vertex_info.get(label)) |v_info|{
+            if(v_info.frozen) return false;
+        }
+        return pq.quiver.numAjecentVertices(label) == 4;
+    }
+
+    if(LabelFct.isProjectiveAssumeSorted(label, self.n)) return false;
+    var adj_labels = try self.getAdjecentLabels(label);
+    defer adj_labels.deinit();
+    return adj_labels.items.len == 4;
+}
+
 pub fn mutateInLabel(self: *Self, label: []const i32) !?[]i32 {
 
 

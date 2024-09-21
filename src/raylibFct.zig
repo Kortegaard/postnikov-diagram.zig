@@ -125,7 +125,6 @@ pub fn loadNewLabelCollection(label_collection: LabelCollection) void {
     std.debug.print("INFO: Changin over\n", .{});
 }
 
-
 pub fn raylibShowPostnikovQuiver() !void {
     const screenWidth = 400;
     const screenHeight = 400;
@@ -138,14 +137,13 @@ pub fn raylibShowPostnikovQuiver() !void {
     rl.initWindow(screenWidth, screenHeight, "Postnikov App");
     defer rl.closeWindow();
 
-    rl.setTargetFPS(120); 
-
+    rl.setTargetFPS(120);
 
     while (!rl.windowShouldClose()) { // Detect window close button or ESC key
         try p_state.update();
 
         if (rl.isKeyPressed(.key_q)) {
-            std.debug.print("hej\n",  .{});
+            std.debug.print("hej\n", .{});
         }
 
         handleClick();
@@ -167,11 +165,10 @@ pub fn handleClick() void {
         // handle click plabic graph
         handleClickPlabicGraph();
     }
-    
 }
 
 pub fn handleClickPlabicGraph() void {
-    if(p_state.label_collection.plabic_graph == null) return;
+    if (p_state.label_collection.plabic_graph == null) return;
     const plabic_graph = p_state.label_collection.plabic_graph.?;
 
     var vert_it2 = plabic_graph.quiver.vertexIterator();
@@ -185,7 +182,7 @@ pub fn handleClickPlabicGraph() void {
 }
 
 pub fn handleClickPostnikovGraph() void {
-    if(p_state.label_collection.postnikov_quiver == null) return;
+    if (p_state.label_collection.postnikov_quiver == null) return;
     const postnikov_quiver = &p_state.label_collection.postnikov_quiver.?;
 
     var vert_it = postnikov_quiver.quiver.vertexIterator();
@@ -198,7 +195,7 @@ pub fn handleClickPostnikovGraph() void {
                     std.debug.print("Something went wrong\n", .{});
                     continue;
                 };
-                if(aa == null) continue;
+                if (aa == null) continue;
                 p_state.reset();
                 std.debug.print("is non crossing {any}, {any}\n", .{ p_state.label_collection.isNonCrossing(), p_state.label_collection.isMaximalNonCrossing() });
                 std.debug.print("new at: {any}\n", .{aa});
@@ -215,7 +212,6 @@ pub fn handleClickPostnikovGraph() void {
             }
         }
     }
-
 }
 
 // *********************** Help ***********************
@@ -243,7 +239,7 @@ pub fn drawStandardTriangleCentered(pos: rl.Vector2, scale: f32, rotation: f32) 
 
 // *********************** DRAW ***********************
 
-pub fn handleDraw() void{
+pub fn handleDraw() void {
     rl.beginDrawing();
     defer rl.endDrawing();
 
@@ -298,7 +294,15 @@ pub fn drawPostnikovQuiver(label_collection: LabelCollection) void {
             if (rl.checkCollisionPointCircle(rl.getMousePosition(), rl.Vector2{ .x = inf.pos.x, .y = inf.pos.y }, p_state.label_vertex_marked_size)) {
                 radius = p_state.clique_vertex_marked_size;
             }
-            rl.drawCircle(@intFromFloat(inf.pos.x), @intFromFloat(inf.pos.y), radius, if (inf.frozen) p_state.frozen_label_color else p_state.label_color);
+
+            const is_mutable = p_state.label_collection.isLabelMutableAssumeSorted(v) catch false;
+
+            rl.drawCircle(
+                @intFromFloat(inf.pos.x),
+                @intFromFloat(inf.pos.y),
+                radius,
+                if (inf.frozen) p_state.frozen_label_color else (if(is_mutable) rl.Color.green else p_state.label_color),
+            );
         }
     }
 }
@@ -323,7 +327,6 @@ pub fn drawPlabicGraph(label_collection: LabelCollection) void {
         }
     }
 }
-
 
 // ***********************  WASM INTERACTION ***********************
 
