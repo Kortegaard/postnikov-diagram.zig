@@ -90,7 +90,9 @@ pub const PostnikovQuiver = struct {
         }
 
         var lab = try label_collection.allocator.alloc(i32, label_collection.k);
+        defer label_collection.allocator.free(lab);
         for (0..label_collection.n) |i| {
+            // calculte corresponding projective label
             for (0..label_collection.k) |j| {
                 lab[j] = @intCast(@mod(i + j, label_collection.n));
                 if (lab[j] == 0) lab[j] = @intCast(label_collection.n);
