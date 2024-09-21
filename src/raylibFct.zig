@@ -284,7 +284,11 @@ pub fn drawPostnikovQuiver(label_collection: LabelCollection) void {
     while (arr_it.next()) |ar| {
         const from_info = p_quiver.vertex_info.get(ar.from) orelse continue;
         const to_info = p_quiver.vertex_info.get(ar.to) orelse continue;
-        rl.drawLine(@intFromFloat(from_info.pos.x), @intFromFloat(from_info.pos.y), @intFromFloat(to_info.pos.x), @intFromFloat(to_info.pos.y), rl.Color.green);
+        rl.drawLineV(
+            from_info.pos.toVector(),
+            to_info.pos.toVector(),
+            rl.Color.green,
+        );
     }
 
     var vert_it = p_quiver.quiver.vertexIterator();
@@ -301,7 +305,7 @@ pub fn drawPostnikovQuiver(label_collection: LabelCollection) void {
                 @intFromFloat(inf.pos.x),
                 @intFromFloat(inf.pos.y),
                 radius,
-                if (inf.frozen) p_state.frozen_label_color else (if(is_mutable) rl.Color.green else p_state.label_color),
+                if (inf.frozen) p_state.frozen_label_color else (if (is_mutable) rl.Color.green else p_state.label_color),
             );
         }
     }

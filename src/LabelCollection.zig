@@ -148,7 +148,7 @@ pub fn mutateInLabel(self: *Self, label: []const i32) !?[]i32 {
         return null;
     }
 
-    // mutating label
+    // finding the numbers that will replace old values
     var new: [2]i32 = [_]i32{ -1, -1 };
 
     for (adj_labels.items) |adj_lab| {
@@ -166,6 +166,7 @@ pub fn mutateInLabel(self: *Self, label: []const i32) !?[]i32 {
 
     const label_slice = try self.getLabelSlice(label) orelse return LabelCollectionError.SliceNotFound;
 
+    // mutating label
     var m: usize = 0;
     out: for (label_slice, 0..) |num, k| {
         for (adj_labels.items) |adj_lab| {
@@ -340,6 +341,7 @@ pub fn getWhiteCliques(self: Self) !std.ArrayList(std.ArrayList([]const i32)) {
     for (self.collection.items) |label| {
         for (0..self.k) |i| {
             var l = try self.allocator.alloc(i32, self.k - 1);
+            defer self.allocator.free(l); // TODO: can avoid extra allocation, by creaing function addOwnedLabel
             //var l: [k - 1]i32 = undefined;
             @memcpy(l[0..i], label[0..i]);
             @memcpy(l[i..], label[i + 1 .. self.k]);
@@ -391,6 +393,7 @@ pub fn getBlackCliques(self: Self) !std.ArrayList(std.ArrayList([]const i32)) {
 
             // Copy, add and sort
             var l = try self.allocator.alloc(i32, self.k + 1);
+            defer self.allocator.free(l); // TODO: can avoid extra allocation, by creaing function addOwnedLabel
             @memcpy(l[0..self.k], label[0..self.k]);
             l[self.k] = @intCast(i);
             std.mem.sort(i32, l, {}, comptime std.sort.asc(i32));

@@ -40,6 +40,9 @@ pub const PostnikovPlabicGraph = struct {
         };
     }
     pub fn deinit(self: *Self) void {
+        for (self.vertex_info.values()) |val| {
+            val.clique.deinit();
+        }
         for (self.vertex_info.keys()) |key| {
             self.allocator.free(key);
         }
@@ -56,7 +59,11 @@ pub const PostnikovPlabicGraph = struct {
         //p_quiver.labelCollection = label_collection;
 
         const white_cliques: std.ArrayList(std.ArrayList([]const i32)) = try label_collection.getWhiteCliquesSorted();
+        defer white_cliques.deinit();
+
         const black_cliques: std.ArrayList(std.ArrayList([]const i32)) = try label_collection.getBlackCliquesSorted();
+        defer black_cliques.deinit();
+
         for (white_cliques.items, 0..) |clique, i| {
             const name: []const u8 = try std.fmt.allocPrint(allocator, "w{d}", .{i});
             try p_quiver.quiver.addVertex(name);
